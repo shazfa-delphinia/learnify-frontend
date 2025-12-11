@@ -1255,13 +1255,14 @@ document.addEventListener("DOMContentLoaded", () => {
         student_id: userId || null,
       };
 
-      const response = await fetch(`${NODE_API_URL}/quiz/ml/predict`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+      const response = await fetch(`${ML_API_URL}/predict`, {
+      method: "POST",
+      headers: {
+      "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
       });
+
 
       const result = await response.json();
 
