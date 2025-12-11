@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learning Buddy</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+<!-- ========== LANDING PAGE ========== -->
+<div id="landing" class="landing-container">
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+
+        <!-- Logo -->
+        <div class="nav-logo">LEARNIFY</div>
+
+        <!-- Menu (kosong dulu) -->
+        <ul class="nav-menu"></ul>
+
+        <!-- Tombol Sign In (jika belum login) -->
+        <button id="signInBtn" class="nav-signin-btn">Sign In</button>
+
+        <!-- PROFILE DROPDOWN (muncul jika login) -->
+        <div id="userMenuContainer" class="user-menu-container" style="display:none;">
+            <div id="userAvatar" class="user-avatar">
+                <img src="assets/userprofile.png" alt="User" class="user-icon-img">
+            </div>
+
+            <div id="userMenu" class="user-popup">
+                <p id="userName" class="user-name">Nama User</p>
+                <p id="userEmail" class="user-email">email@example.com</p>
+                <button id="logoutBtn" class="logout-btn">Logout</button>
+            </div>
+        </div>
+
+    </nav>
+
+    <div id="logoutPopup" class="logout-popup">
+    <div class="popup-content">
+        <p>Yakin ingin logout?</p>
+        <div class="popup-buttons">
+            <button id="popupYes" class="yes-btn">Ya</button>
+            <button id="popupNo" class="no-btn">Tidak</button>
+        </div>
+    </div>
+</div>
+
+    <!-- Wave Background -->
+    <div class="wave-container">
+        <svg viewBox="0 0 1440 320">
+            <path fill="#dbe9ff" 
+            d="M0,64L48,69.3C96,75,192,85,288,106.7C384,128,480,160,576,186.7C672,213,768,235,864,240C960,245,1056,235,1152,202.7C1248,171,1344,117,1392,90.7L1440,64L1440,320L0,320Z">
+            </path>
+        </svg>
+    </div>
+
+    <!-- HERO SECTION -->
+    <div class="landing-content">
+        <div class="text-side">
+            <h1 class="hero-title">
+                A New Way of <br><span class="highlight">Digital Learning</span>
+            </h1>
+
+            <p class="hero-desc">
+                Selamat datang di <strong>Learnify</strong> — platform belajar dengan 
+                <strong>Learning Buddy</strong> yang siap membantumu menemukan level,
+                memilih learning path, dan membuat roadmap belajar sesuai hasil kuismu.
+            </p>
+
+            <button id="startChatBtn" class="start-btn">
+                Find Your Learning Path and Level →
+            </button>
+
+            <div class="features">
+                <span>📘 Personal Learning Path</span>
+                <span>🤖 Learning Assistant</span>
+                <span>⭐ Adaptive Roadmap</span>
+            </div>
+        </div>
+
+        <!-- Gambar -->
+        <div class="image-side">
+            <img src="assets/lapboy.png" class="hero-img" alt="Study 3D">
+        </div>
+    </div>
+
+    <!-- Floating Chat Icon -->
+    <div id="chatIcon" class="chat-icon">💭</div>
+
+</div>
+
+<!-- ========== CHATBOT PAGE ========== -->
+<div id="chatbot" style="display:none;">
+
+    <div class="layout">
+
+        <!-- Chat Panel -->
+        <main class="chat-panel">
+            
+            <!-- Back Button -->
+            <div class="chat-header">
+                <button id="closeBtn" class="back-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="chat-messages" class="chat-messages"></div>
+
+            <form id="chat-form" class="input-area">
+                <input id="chat-input" type="text" placeholder="Tanya sesuatu ke Learning Buddy..." />
+                <button type="submit" class="send">➤</button>
+            </form>
+
+        </main>
+
+    </div>
+
+</div>
+
+<!-- SCRIPT CHAT ICON -->
+<script>
+// This will be handled by script.js
+// Keeping this for backward compatibility but script.js will override it
+</script>
+
+<!-- SCRIPT LOGIKA CHATBOT -->
+<script src="script.js"></script>
+
+<!-- SCRIPT LOGIN / LOGOUT & USER MENU -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const landing  = document.getElementById("landing");
+    const chatbot  = document.getElementById("chatbot");
+    const chatIcon = document.getElementById("chatIcon");
+    const closeBtn = document.getElementById("closeBtn");
+
+    const signInBtn         = document.getElementById('signInBtn');
+    const userMenuContainer = document.getElementById('userMenuContainer');
+    const userAvatar        = document.getElementById('userAvatar');
+    const userMenu          = document.getElementById('userMenu');
+    const logoutBtn         = document.getElementById('logoutBtn');
+    const userNameEl        = document.getElementById('userName');
+    const userEmailEl       = document.getElementById('userEmail');
+
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+    const nameFromStorage  = localStorage.getItem('userName')  || 'Nama User';
+    const emailFromStorage = localStorage.getItem('userEmail') || 'email@example.com';
+
+    // ==== STATE LOGIN ====
+    if (isLoggedIn) {
+        if (signInBtn) signInBtn.style.display = 'none';
+        if (userMenuContainer) userMenuContainer.style.display = 'flex';
+
+        if (userNameEl)  userNameEl.textContent  = nameFromStorage;
+        if (userEmailEl) userEmailEl.textContent = emailFromStorage;
+    } else {
+        if (signInBtn) {
+            signInBtn.style.display = 'inline-block';
+            signInBtn.onclick = () => window.location.href = "auth/signin.html";
+        }
+        if (userMenuContainer) userMenuContainer.style.display = 'none';
+    }
+
+    // ==== TOGGLE DROPDOWN ====
+    if (userAvatar && userMenu) {
+        userAvatar.addEventListener('click', function (e) {
+            e.stopPropagation();
+            userMenu.classList.toggle('show');
+        });
+    }
+
+    // klik di luar dropdown → tutup
+    document.addEventListener('click', function (e) {
+        if (!userMenu || !userAvatar) return;
+        if (!userMenu.contains(e.target) && !userAvatar.contains(e.target)) {
+            userMenu.classList.remove('show');
+        }
+    });
+
+    // ==== LOGOUT ====
+   // ==== LOGOUT ====
+logoutBtn.onclick = () => {
+    const yakin = confirm("Yakin ingin logout?");
+    if (yakin) {
+        localStorage.setItem('isLoggedIn', 'false');
+        localStorage.removeItem('userId');
+        location.reload();
+    }
+};
+
+
+    // ==== TRANSISI LANDING <-> CHATBOT ====
+    if (chatIcon && landing && chatbot) {
+        chatIcon.addEventListener("click", function (e) {
+            if (typeof requireLoginForChat === 'function' && !requireLoginForChat(e)) return;
+            landing.style.display = "none";
+            chatbot.style.display = "block";
+            // Trigger welcome message when chatbot opens
+            if (typeof openChatbot === 'function') {
+                openChatbot();
+            } else if (typeof checkQuizStatusAndWelcome === 'function') {
+                setTimeout(() => checkQuizStatusAndWelcome(), 50);
+            }
+        });
+    }
+
+    if (closeBtn && landing && chatbot) {
+        closeBtn.addEventListener("click", function () {
+            // Save chat history before closing
+            const userId = localStorage.getItem('userId');
+            if (userId && typeof saveChatHistory === 'function') {
+                saveChatHistory();
+            }
+            
+            chatbot.style.display = "none";
+            landing.style.display = "block";
+            // Don't reset welcome flag - keep it so welcome doesn't show again when reopening
+        });
+    }
+
+});
+</script>
+
+</body>
+</html>

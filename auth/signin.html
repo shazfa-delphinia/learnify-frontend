@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Learnify</title>
+
+    <!-- CSS khusus halaman SIGN IN -->
+    <link rel="stylesheet" href="signin.css">
+</head>
+<body>
+    <a href="../index.html" class="back-icon">
+    ←
+</a>
+
+    <div class="nature-background">
+        <div class="floating-leaf leaf-1"></div>
+        <div class="floating-leaf leaf-2"></div>
+        <div class="floating-leaf leaf-3"></div>
+        <div class="floating-leaf leaf-4"></div>
+    </div>
+
+    <div class="login-container">
+        <div class="wellness-card">
+            <div class="organic-border"></div>
+            
+            <div class="mindful-header">
+                <div class="zen-logo">
+                    <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+                    </svg>
+                    <div class="zen-glow"></div>
+                </div>
+                <h1>L E A R N I F Y </h1>
+                <p>Sign in to continue your learning journey</p>
+            </div>
+            
+<!-- HANYA EMAIL + PASSWORD -->
+<form class="harmony-form" id="loginForm" novalidate>
+
+    <!-- EMAIL -->
+    <div class="field-block">
+        <div class="organic-field">
+            <div class="field-nature"></div>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                autocomplete="email"
+                placeholder=" "
+            >
+            <label for="email">Email Address</label>
+            <div class="growth-indicator">
+                <div class="leaf-sprout"></div>
+            </div>
+        </div>
+
+        <!-- ERROR DI LUAR KOTAK -->
+        <span class="gentle-error" id="emailError"></span>
+    </div>
+
+    <!-- PASSWORD -->
+    <div class="field-block">
+        <div class="organic-field">
+            <div class="field-nature"></div>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                required
+                autocomplete="current-password"
+                placeholder=" "
+            >
+            <label for="password">Password</label>
+
+            <button
+                type="button"
+                class="nature-toggle"
+                id="passwordToggle"
+                aria-label="Toggle password visibility"
+            >
+                <!-- mata terbuka -->
+                <svg class="eye-visible" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M10 4c-4 0-7 3-8 6 1 3 4 6 8 6s7-3 8-6c-1-3-4-6-8-6zm0 10a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z" fill="currentColor"/>
+                </svg>
+                <!-- mata tertutup -->
+                <svg class="eye-hidden" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M3 3l14 14M8.5 8.5a2 2 0 002.83 2.83m-.83-4.83a4 4 0 014 4M10 6C6 6 3 9 2 12c.5 1.5 2 3.5 4 4.5M10 14c4 0 7-3 8-6-.5-1.5-2-3.5-4-4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- ERROR DI LUAR KOTAK -->
+        <span class="gentle-error" id="passwordError"></span>
+    </div>
+
+    <!-- SIGN IN BUTTON -->
+    <button type="submit" class="harmony-button">
+        <div class="button-earth"></div>
+        <span class="button-text">Sign In</span>
+        <div class="button-growth">
+            <div class="growing-circle circle-1"></div>
+            <div class="growing-circle circle-2"></div>
+            <div class="growing-circle circle-3"></div>
+        </div>
+        <div class="button-aura"></div>
+    </button>
+
+</form>
+
+
+
+            <!-- HANYA LINK KE SIGN UP -->
+            <div class="nurture-signup">
+                <span>New to Learnify? </span>
+                <a href="signup.html" class="growth-link">Create account</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS khusus SIGN IN -->
+    <script src="signin.js"></script>
+</body>
+</html>
