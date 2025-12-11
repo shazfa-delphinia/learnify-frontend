@@ -625,42 +625,100 @@ async function displayRoadmap(userId = null) {
   const actualUserId = userId || localStorage.getItem("userId");
 
   if (!actualUserId) {
-    window.addMessage("Silakan login terlebih dahulu untuk melihat roadmap.", "bot");
+    if (window.addMessage) {
+      window.addMessage("Silakan login terlebih dahulu untuk melihat roadmap.", "bot");
+    }
     return;
   }
 
-  window.addMessage("📋 Memuat roadmap kamu...", "bot");
+  if (window.addMessage) {
+    window.addMessage("📋 Memuat roadmap kamu...", "bot");
+  }
 
   try {
-    // === 1. Ambil data langsung dari backend ===
-    const roadmap = await getUserRoadmap(actualUserId);
-    const progress = await getUserProgress(actualUserId);
+    const storedLpName = (localStorage.getItem("userLearningPath") || "").toLowerCase();
 
-    // === 2. Jika backend tidak mengembalikan roadmap ===
-    if (!roadmap || !roadmap.learning_path) {
-      window.addMessage(
-        "Roadmap belum tersedia. Silakan selesaikan kuis terlebih dahulu.",
-        "bot"
-      );
+    let [roadmap, progress] = await Promise.all([
+      getUserRoadmap(actualUserId),
+      getUserProgress(actualUserId),
+    ]);
+
+    await ensureStaticRoadmapData();
+
+    if (roadmap && storedLpName) {
+      const fetchedLpName = (resolveLearningPathName(roadmap.learning_path, roadmap) || "").toLowerCase();
+      if (fetchedLpName && fetchedLpName !== storedLpName) {
+        const localRoadmap = buildRoadmapFromLocalData();
+        if (localRoadmap) {
+          roadmap = localRoadmap;
+        }
+      }
+    }
+
+    if (staticRoadmapData) {
+      const preferredLpName =
+        storedLpName ||
+        (roadmap ? resolveLearningPathName(roadmap.learning_path, roadmap) : "");
+      if (preferredLpName) {
+        const staticRoadmap = buildRoadmapFromStatic(
+          preferredLpName,
+          (roadmap && roadmap.user_level) ||
+            localStorage.getItem("userLevel") ||
+            "beginner"
+        );
+        if (staticRoadmap) {
+          roadmap = staticRoadmap;
+        }
+      }
+    }
+
+    if (!roadmap) {
+      console.log("Backend tidak mengembalikan roadmap, mencoba buildRoadmapFromLocalData() ...");
+      roadmap = buildRoadmapFromLocalData();
+    }
+
+    const chatMessagesEl = document.getElementById("chat-messages");
+    if (chatMessagesEl && chatMessagesEl.lastElementChild) {
+      const lastMsg = chatMessagesEl.lastElementChild;
+      if (lastMsg && lastMsg.textContent && lastMsg.textContent.includes("Memuat roadmap")) {
+        lastMsg.remove();
+      }
+    }
+
+    if (!roadmap) {
+      if (window.addMessage) {
+        window.addMessage(
+          "Roadmap belum tersedia. Silakan selesaikan kuis terlebih dahulu untuk mendapatkan roadmap pembelajaran kamu.",
+          "bot"
+        );
+      }
       return;
     }
 
-    // === 3. Render roadmap langsung dari backend ===
     const roadmapHTML = formatRoadmapHTML(roadmap, progress || []);
 
-    window.addMessage(roadmapHTML, "bot", true);
-
+    if (window.addMessage) {
+      window.addMessage(roadmapHTML, "bot", true);
+    }
   } catch (error) {
     console.error("Error displaying roadmap:", error);
 
-    // === 4. Fallback A2: hanya pesan error, tanpa fallback modul lain ===
-    window.addMessage(
-      "Maaf, roadmap tidak dapat dimuat sekarang. Coba lagi nanti.",
-      "bot"
-    );
+    const chatMessagesEl = document.getElementById("chat-messages");
+    if (chatMessagesEl && chatMessagesEl.lastElementChild) {
+      const lastMsg = chatMessagesEl.lastElementChild;
+      if (lastMsg && lastMsg.textContent && lastMsg.textContent.includes("Memuat roadmap")) {
+        lastMsg.remove();
+      }
+    }
+
+    if (window.addMessage) {
+      window.addMessage(
+        "Maaf, terjadi kesalahan saat memuat roadmap. Silakan coba lagi nanti.",
+        "bot"
+      );
+    }
   }
 }
-
 
 window.displayRoadmap = displayRoadmap;
 
