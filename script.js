@@ -1,11 +1,4 @@
 // =====================================
-// 0. KONFIG BACKEND
-// =====================================
-const NODE_API_URL = "https://learnify-backend-2exd.onrender.com";
-// Kalau nanti mau pakai ML langsung dari FE, baru pakai ini:
-// const ML_API_URL   = "https://learnify-ml.onrender.com";
-
-// =====================================
 // 1. KONFIG API DICODING
 // =====================================
 const API_URL_learning_paths = "https://jrkqcbmjknzgpbtrupxh.supabase.co/rest/v1/learning_paths";
