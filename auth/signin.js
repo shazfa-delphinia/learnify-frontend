@@ -1,7 +1,12 @@
+// auth/signin.js
+// Pastikan config.js sudah di-load dulu sehingga NODE_API_URL tersedia
+
 // Simple Eco Wellness Sign In (email + password only)
 class EcoWellnessLoginForm {
     constructor() {
         this.form = document.getElementById('loginForm');
+        if (!this.form) return;
+
         this.emailInput = document.getElementById('email');
         this.passwordInput = document.getElementById('password');
         this.passwordToggle = document.getElementById('passwordToggle');
@@ -16,38 +21,38 @@ class EcoWellnessLoginForm {
     }
     
     bindEvents() {
-    this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-    this.emailInput.addEventListener('blur', () => this.validateEmail());
-    this.passwordInput.addEventListener('blur', () => this.validatePassword());
+        this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+        this.emailInput.addEventListener('blur', () => this.validateEmail());
+        this.passwordInput.addEventListener('blur', () => this.validatePassword());
 
-    // email input handler
-    this.emailInput.addEventListener('input', () => this.clearError('email'));
+        // email input handler
+        this.emailInput.addEventListener('input', () => this.clearError('email'));
 
-    // password input handler + kontrol ikon mata
-    this.passwordInput.addEventListener('input', () => {
-        this.clearError('password');
+        // password input handler + kontrol ikon mata
+        this.passwordInput.addEventListener('input', () => {
+            this.clearError('password');
 
-        const hasValue = this.passwordInput.value.length > 0;
+            const hasValue = this.passwordInput.value.length > 0;
 
-        if (hasValue) {
-            // Tampilkan ikon mata
-            this.passwordToggle.classList.add('show');
-        } else {
-            // Sembunyikan ikon mata
-            this.passwordToggle.classList.remove('show');
+            if (hasValue) {
+                // Tampilkan ikon mata
+                this.passwordToggle.classList.add('show');
+            } else {
+                // Sembunyikan ikon mata
+                this.passwordToggle.classList.remove('show');
 
-            // Jika sedang dalam mode "text", balikkan ke "password"
-            if (this.passwordInput.type === 'text') {
-                this.passwordInput.type = 'password';
-                this.passwordToggle.classList.remove('toggle-visible');
+                // Jika sedang dalam mode "text", balikkan ke "password"
+                if (this.passwordInput.type === 'text') {
+                    this.passwordInput.type = 'password';
+                    this.passwordToggle.classList.remove('toggle-visible');
+                }
             }
-        }
-    });
+        });
 
-    // supaya animasi label jalan
-    this.emailInput.setAttribute('placeholder', ' ');
-    this.passwordInput.setAttribute('placeholder', ' ');
-}
+        // supaya animasi label jalan
+        this.emailInput.setAttribute('placeholder', ' ');
+        this.passwordInput.setAttribute('placeholder', ' ');
+    }
    
     setupPasswordToggle() {
         this.passwordToggle.addEventListener('click', () => {
@@ -129,8 +134,8 @@ class EcoWellnessLoginForm {
             const email = this.emailInput.value.trim();
             const password = this.passwordInput.value;
 
-            // Call backend API
-            const response = await fetch('http://localhost:5000/auth/login', {
+            // Call backend API (Render)
+            const response = await fetch(`${NODE_API_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -138,7 +143,7 @@ class EcoWellnessLoginForm {
                 body: JSON.stringify({ email, password })
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 throw new Error(data.error || 'Login failed');
@@ -146,21 +151,20 @@ class EcoWellnessLoginForm {
 
             // SIMPAN STATUS LOGIN DAN DATA USER DI LOCALSTORAGE
             localStorage.setItem('isLoggedIn', 'true');
-            localStorage.setItem('userName', data.user.name || 'User');
-            localStorage.setItem('userEmail', data.user.email || email);
-            localStorage.setItem('userId', data.user.id || '');
+            localStorage.setItem('userName', data.user?.name || 'User');
+            localStorage.setItem('userEmail', data.user?.email || email);
+            localStorage.setItem('userId', data.user?.id || '');
 
-            // REDIRECT KE LANDING PAGE
+            // REDIRECT KE LANDING PAGE (index.html di root)
             window.location.href = "../index.html";
         } catch (error) {
             console.error('Login error:', error);
             let errorMessage = 'Login failed. Please try again.';
             
-            // Check if it's a network error
             if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                errorMessage = 'Tidak bisa terhubung ke server. Pastikan backend server sudah running di port 5000.';
-            } else {
-                errorMessage = error.message || 'Login failed. Please try again.';
+                errorMessage = 'Tidak bisa terhubung ke server. Pastikan backend sudah bisa diakses di ' + NODE_API_URL;
+            } else if (error.message) {
+                errorMessage = error.message;
             }
             
             this.showError('password', errorMessage);

@@ -1,3 +1,6 @@
+// auth/signup.js
+// Pastikan config.js sudah di-load lebih dulu sehingga NODE_API_URL tersedia
+
 // ==== SIGN UP FORM (Nama Lengkap, Email, Password) ====
 class EcoWellnessSignupForm {
     constructor() {
@@ -82,7 +85,6 @@ class EcoWellnessSignupForm {
         const isHidden = this.passwordInput.type === 'password';
 
         // Kalau hidden (type=password) → pakai class toggle-visible
-        // CSS: .toggle-visible akan menampilkan svg.eye-hidden (mata dicoret)
         if (isHidden) {
             this.passwordToggle.classList.add('toggle-visible');
         } else {
@@ -174,8 +176,8 @@ class EcoWellnessSignupForm {
             const email = this.emailInput.value.trim();
             const password = this.passwordInput.value;
 
-            // Call backend API
-            const response = await fetch('http://localhost:5000/auth/register', {
+            // Call backend API (Render)
+            const response = await fetch(`${NODE_API_URL}/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -183,26 +185,25 @@ class EcoWellnessSignupForm {
                 body: JSON.stringify({ name, email, password })
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 throw new Error(data.error || 'Sign up failed');
             }
 
             alert('Sign up berhasil! Silakan login.');
-            // Redirect to sign in
+            // Redirect ke sign in (di folder auth yang sama)
             window.location.href = "signin.html";
         } catch (error) {
             console.error('Signup error:', error);
             let errorMessage = 'Sign up gagal. Coba lagi ya.';
-            
-            // Check if it's a network error
+
             if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                errorMessage = 'Tidak bisa terhubung ke server. Pastikan backend server sudah running di port 5000.';
-            } else {
-                errorMessage = error.message || 'Sign up gagal. Coba lagi ya.';
+                errorMessage = 'Tidak bisa terhubung ke server. Pastikan backend sudah bisa diakses di ' + NODE_API_URL;
+            } else if (error.message) {
+                errorMessage = error.message;
             }
-            
+
             this.showError('password', errorMessage);
         } finally {
             this.setLoading(false);

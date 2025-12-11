@@ -1,4 +1,11 @@
 // =====================================
+// 0. KONFIG BACKEND
+// =====================================
+const NODE_API_URL = "https://learnify-backend-2exd.onrender.com";
+// Kalau nanti mau pakai ML langsung dari FE, baru pakai ini:
+// const ML_API_URL   = "https://learnify-ml.onrender.com";
+
+// =====================================
 // 1. KONFIG API DICODING
 // =====================================
 const API_URL_learning_paths = "https://jrkqcbmjknzgpbtrupxh.supabase.co/rest/v1/learning_paths";
@@ -171,7 +178,6 @@ function buildRoadmapFromLocalData() {
 
   const lp = dbLearningPaths.find((lp) => {
     const candidates = [lp.name_lp, lp.learning_path_name, lp.title].filter(Boolean).map((s) => s.toLowerCase());
-
     return candidates.includes(storedLpName);
   });
 
@@ -194,7 +200,6 @@ function buildRoadmapFromLocalData() {
 
   return {
     user_level: userLevel,
-    // ini yang dipakai header
     learning_path_name: lp.name_lp || lp.learning_path_name || lp.title || storedLpName,
     learning_path: {
       ...lp,
@@ -212,7 +217,12 @@ async function fetchDicoding(url) {
 // Ambil semua data sekali di awal
 async function loadAllData() {
   try {
-    const [learningPaths, courses, courseLevels, tutorials] = await Promise.all([fetchDicoding(API_URL_learning_paths), fetchDicoding(API_URL_courses), fetchDicoding(API_URL_course_levels), fetchDicoding(API_URL_tutorials)]);
+    const [learningPaths, courses, courseLevels, tutorials] = await Promise.all([
+      fetchDicoding(API_URL_learning_paths),
+      fetchDicoding(API_URL_courses),
+      fetchDicoding(API_URL_course_levels),
+      fetchDicoding(API_URL_tutorials),
+    ]);
 
     console.log("LEARNING PATHS:", learningPaths);
     console.log("COURSES:", courses);
@@ -224,12 +234,9 @@ async function loadAllData() {
     dbCourseLevels = courseLevels;
     dbTutorials = tutorials;
 
-    // ==========================
-    // BANGUN KNOWLEDGE BASE DI SINI
-    // ==========================
+    // Bangun knowledge base
     knowledgeBase = [];
 
-    // learning paths
     dbLearningPaths.forEach((lp) => {
       knowledgeBase.push({
         type: "learning_path",
@@ -239,7 +246,6 @@ async function loadAllData() {
       });
     });
 
-    // courses
     dbCourses.forEach((c) => {
       knowledgeBase.push({
         type: "course",
@@ -249,7 +255,6 @@ async function loadAllData() {
       });
     });
 
-    // tutorials
     dbTutorials.forEach((t) => {
       knowledgeBase.push({
         type: "tutorial",
@@ -281,8 +286,6 @@ function scoreMatch(userText, itemTitle) {
   const t = normalize(itemTitle);
 
   if (!t) return 0;
-
-  // kalau judul full ada di pertanyaan → skor tinggi
   if (u.includes(t)) return 1.0;
 
   const uWords = new Set(u.split(" ").filter(Boolean));
@@ -294,7 +297,7 @@ function scoreMatch(userText, itemTitle) {
     if (uWords.has(w)) matchCount++;
   });
 
-  return matchCount / tWords.length; // 0–1
+  return matchCount / tWords.length;
 }
 
 function getAnswerFromDicoding(userText) {
@@ -315,13 +318,15 @@ function getAnswerFromDicoding(userText) {
 
   console.log("BEST MATCH:", { bestItem, bestScore });
 
-  // kalau skor terlalu kecil, anggap tidak relevan
   if (!bestItem || bestScore < 0.25) {
     return "Maaf, aku tidak menemukan materi yang pas. Coba gunakan nama course atau learning path yang lebih spesifik ya 😊";
   }
 
   const title = bestItem.title || "(tanpa judul)";
-  const desc = bestItem.description && bestItem.description.trim().length > 0 ? bestItem.description : "Belum ada deskripsi yang jelas di data.";
+  const desc =
+    bestItem.description && bestItem.description.trim().length > 0
+      ? bestItem.description
+      : "Belum ada deskripsi yang jelas di data.";
 
   if (bestItem.type === "learning_path") {
     return `👍 Learning Path yang paling relevan:\n\n${title}\n\n${desc}`;
@@ -341,14 +346,13 @@ function getAnswerFromDicoding(userText) {
 // Format AI response to be more readable with HTML
 function formatAIResponse(text) {
   if (!text) return text;
-
-  // Convert markdown-style formatting to HTML
   let formatted = String(text);
 
-  // First, convert **bold** to <strong> (do this first before processing lists)
-  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #ffffff; font-weight: 600;">$1</strong>');
+  formatted = formatted.replace(
+    /\*\*(.+?)\*\*/g,
+    '<strong style="color: #ffffff; font-weight: 600;">$1</strong>'
+  );
 
-  // Split text into sections (by double newlines)
   const sections = formatted.split(/\n\n+/);
   const processedSections = [];
   let currentList = [];
@@ -357,42 +361,43 @@ function formatAIResponse(text) {
     const section = sections[i].trim();
     if (!section) continue;
 
-    // Check if this section is a numbered list item (starts with number.)
     const listMatch = section.match(/^(\d+)\.\s+(.+)$/s);
 
     if (listMatch) {
-      // It's a list item
       const num = listMatch[1];
       let content = listMatch[2].trim();
-
-      // Convert single newlines within list item to <br>
       content = content.replace(/\n/g, "<br>");
 
-      currentList.push(`<li style="margin: 10px 0; padding-left: 5px; line-height: 1.7; color: #ffffff;"><strong style="color: #ffffff; font-weight: 600;">${num}.</strong> ${content}</li>`);
+      currentList.push(
+        `<li style="margin: 10px 0; padding-left: 5px; line-height: 1.7; color: #ffffff;"><strong style="color: #ffffff; font-weight: 600;">${num}.</strong> ${content}</li>`
+      );
     } else {
-      // Not a list item - close current list if any
       if (currentList.length > 0) {
-        processedSections.push(`<ul style="margin: 12px 0; padding-left: 20px; list-style: none;">${currentList.join("")}</ul>`);
+        processedSections.push(
+          `<ul style="margin: 12px 0; padding-left: 20px; list-style: none;">${currentList.join(
+            ""
+          )}</ul>`
+        );
         currentList = [];
       }
 
-      // Convert single newlines to <br>
       const paraContent = section.replace(/\n/g, "<br>");
-      processedSections.push(`<p style="margin: 12px 0; line-height: 1.8; color: #ffffff;">${paraContent}</p>`);
+      processedSections.push(
+        `<p style="margin: 12px 0; line-height: 1.8; color: #ffffff;">${paraContent}</p>`
+      );
     }
   }
 
-  // Close any remaining list
   if (currentList.length > 0) {
-    processedSections.push(`<ul style="margin: 12px 0; padding-left: 20px; list-style: none;">${currentList.join("")}</ul>`);
+    processedSections.push(
+      `<ul style="margin: 12px 0; padding-left: 20px; list-style: none;">${currentList.join(
+        ""
+      )}</ul>`
+    );
   }
 
-  // Join all sections
   formatted = processedSections.join("");
-
-  // Wrap in a container div
   formatted = `<div style="color: #ffffff; line-height: 1.7;">${formatted}</div>`;
-
   return formatted;
 }
 
@@ -400,10 +405,9 @@ function formatAIResponse(text) {
 // ROADMAP FUNCTIONS
 // =====================================
 
-// Get user roadmap from backend
 async function getUserRoadmap(userId) {
   try {
-    const response = await fetch(`http://localhost:5000/user/${userId}/roadmap`);
+    const response = await fetch(`${NODE_API_URL}/user/${userId}/roadmap`);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error("Failed to fetch roadmap:", response.status, errorData);
@@ -425,10 +429,9 @@ async function getUserRoadmap(userId) {
   }
 }
 
-// Get user progress from backend
 async function getUserProgress(userId) {
   try {
-    const response = await fetch(`http://localhost:5000/user/${userId}/progress`);
+    const response = await fetch(`${NODE_API_URL}/user/${userId}/progress`);
     if (!response.ok) {
       throw new Error("Failed to fetch progress");
     }
@@ -440,7 +443,6 @@ async function getUserProgress(userId) {
   }
 }
 
-// Resolve LP display name with graceful fallback
 function resolveLearningPathName(lp = {}, roadmap = {}) {
   return (
     lp.name_lp ||
@@ -453,7 +455,6 @@ function resolveLearningPathName(lp = {}, roadmap = {}) {
   );
 }
 
-// Format roadmap to HTML
 function formatRoadmapHTML(roadmap, progress = []) {
   if (!roadmap || !roadmap.learning_path) {
     return '<p style="color: #ffffff;">Roadmap belum tersedia. Silakan selesaikan kuis terlebih dahulu.</p>';
@@ -463,10 +464,11 @@ function formatRoadmapHTML(roadmap, progress = []) {
   const courses = lp.course || [];
   const lpName = resolveLearningPathName(lp, roadmap) || "N/A";
   const lpSummary = lp.summary || lp.learning_path_description || lp.description;
-  const lpUrlRaw = mapLearningPathToUrl(lpName) || `https://www.dicoding.com/search?keyword=${encodeURIComponent(lpName)}`;
+  const lpUrlRaw =
+    mapLearningPathToUrl(lpName) ||
+    `https://www.dicoding.com/search?keyword=${encodeURIComponent(lpName)}`;
   const lpUrl = lpUrlRaw.replace(/"/g, "&quot;");
 
-  // Create progress map for adaptive roadmap
   const progressMap = {};
   progress.forEach((p) => {
     if (p.tutorials && p.tutorials.course) {
@@ -488,7 +490,11 @@ function formatRoadmapHTML(roadmap, progress = []) {
         <h3 style="margin: 0 0 12px 0; color: #ffffff; font-size: 20px; font-weight: bold;">📘 Roadmap Pembelajaran</h3>
         <p style="margin: 8px 0; color: #ffffff;"><strong>Learning Path:</strong> ${lpName}</p>
         <p style="margin: 8px 0; color: #ffffff;"><strong>Level Skill:</strong> ${roadmap.user_level || "N/A"}</p>
-        ${lpSummary ? `<p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">${lpSummary}</p>` : ""}
+        ${
+          lpSummary
+            ? `<p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">${lpSummary}</p>`
+            : ""
+        }
         <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.75); font-size: 12px;">Klik untuk membuka halaman learning path di Dicoding.</p>
       </div>
       
@@ -496,20 +502,26 @@ function formatRoadmapHTML(roadmap, progress = []) {
         <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 18px; font-weight: 600;">📚 Modul Pembelajaran</h4>
   `;
 
-  // Sort courses by course_order
-  const sortedCourses = [...courses].sort((a, b) => (a.course_order || 0) - (b.course_order || 0));
+  const sortedCourses = [...courses].sort(
+    (a, b) => (a.course_order || 0) - (b.course_order || 0)
+  );
 
   sortedCourses.forEach((course, courseIdx) => {
     const courseName = course.course_name || "Course";
-    const courseLinkRaw = course.course_url || course.url || course.link || course.course_link || course.external_url;
+    const courseLinkRaw =
+      course.course_url || course.url || course.link || course.course_link || course.external_url;
     const lpUrl = mapLearningPathToUrl(lpName);
-    const courseLink = courseLinkRaw || lpUrl || `https://www.dicoding.com/search?keyword=${encodeURIComponent(courseName)}`;
+    const courseLink =
+      courseLinkRaw ||
+      lpUrl ||
+      `https://www.dicoding.com/search?keyword=${encodeURIComponent(courseName)}`;
     const safeCourseLink = courseLink.replace(/"/g, "&quot;");
     const courseProgress = progressMap[course.id] || {};
     const tutorials = course.tutorials || [];
-    const sortedTutorials = [...tutorials].sort((a, b) => (a.tutorial_order || 0) - (b.tutorial_order || 0));
+    const sortedTutorials = [...tutorials].sort(
+      (a, b) => (a.tutorial_order || 0) - (b.tutorial_order || 0)
+    );
 
-    // Calculate course completion
     let completedTutorials = 0;
     let totalTutorials = sortedTutorials.length;
     sortedTutorials.forEach((tutorial) => {
@@ -518,9 +530,9 @@ function formatRoadmapHTML(roadmap, progress = []) {
         completedTutorials++;
       }
     });
-    const courseCompletion = totalTutorials > 0 ? Math.round((completedTutorials / totalTutorials) * 100) : 0;
+    const courseCompletion =
+      totalTutorials > 0 ? Math.round((completedTutorials / totalTutorials) * 100) : 0;
 
-    // Determine course status
     let statusIcon = "⏳";
     let statusText = "Belum dimulai";
     if (courseCompletion === 100) {
@@ -532,18 +544,32 @@ function formatRoadmapHTML(roadmap, progress = []) {
     }
 
     html += `
-      <div onclick="window.open('${safeCourseLink}', '_blank')" style="background: rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid ${courseCompletion === 100 ? "#4caf50" : courseCompletion > 0 ? "#ff9800" : "#2196f3"}; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 12px rgba(0,0,0,0.18)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
+      <div onclick="window.open('${safeCourseLink}', '_blank')" style="background: rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 4px solid ${
+        courseCompletion === 100 ? "#4caf50" : courseCompletion > 0 ? "#ff9800" : "#2196f3"
+      }; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 12px rgba(0,0,0,0.18)';" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';">
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
           <div style="flex: 1;">
             <h5 style="margin: 0 0 4px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
               ${courseIdx + 1}. ${courseName}
             </h5>
-            ${course.level ? `<span style="color: rgba(255, 255, 255, 0.7); font-size: 13px;">Level: ${course.level}</span>` : ""}
-            ${course.hours_to_study ? `<span style="color: rgba(255, 255, 255, 0.7); font-size: 13px; margin-left: 8px;">⏱️ ${course.hours_to_study} jam</span>` : ""}
+            ${
+              course.level
+                ? `<span style="color: rgba(255, 255, 255, 0.7); font-size: 13px;">Level: ${course.level}</span>`
+                : ""
+            }
+            ${
+              course.hours_to_study
+                ? `<span style="color: rgba(255, 255, 255, 0.7); font-size: 13px; margin-left: 8px;">⏱️ ${course.hours_to_study} jam</span>`
+                : ""
+            }
           </div>
           <div style="text-align: right;">
             <span style="color: #ffffff; font-size: 14px; font-weight: 600;">${statusIcon} ${statusText}</span>
-            ${totalTutorials > 0 ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 12px; margin-top: 4px;">${completedTutorials}/${totalTutorials} tutorial</div>` : ""}
+            ${
+              totalTutorials > 0
+                ? `<div style="color: rgba(255, 255, 255, 0.8); font-size: 12px; margin-top: 4px;">${completedTutorials}/${totalTutorials} tutorial</div>`
+                : ""
+            }
           </div>
         </div>
         
@@ -551,7 +577,9 @@ function formatRoadmapHTML(roadmap, progress = []) {
           courseCompletion > 0
             ? `
           <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; height: 8px; margin: 8px 0; overflow: hidden;">
-            <div style="background: ${courseCompletion === 100 ? "#4caf50" : "#ff9800"}; height: 100%; width: ${courseCompletion}%; transition: width 0.3s ease;"></div>
+            <div style="background: ${
+              courseCompletion === 100 ? "#4caf50" : "#ff9800"
+            }; height: 100%; width: ${courseCompletion}%; transition: width 0.3s ease;"></div>
           </div>
         `
             : ""
@@ -567,7 +595,11 @@ function formatRoadmapHTML(roadmap, progress = []) {
                 const isCompleted = tutProgress && tutProgress.status === "completed";
                 const isInProgress = tutProgress && tutProgress.status === "in_progress";
                 const tutIcon = isCompleted ? "✅" : isInProgress ? "🔄" : "⭕";
-                const tutColor = isCompleted ? "rgba(76, 175, 80, 0.9)" : isInProgress ? "rgba(255, 152, 0, 0.9)" : "rgba(255, 255, 255, 0.6)";
+                const tutColor = isCompleted
+                  ? "rgba(76, 175, 80, 0.9)"
+                  : isInProgress
+                  ? "rgba(255, 152, 0, 0.9)"
+                  : "rgba(255, 255, 255, 0.6)";
 
                 return `
                 <div style="margin: 6px 0; color: ${tutColor}; font-size: 14px;">
@@ -596,7 +628,6 @@ function formatRoadmapHTML(roadmap, progress = []) {
   return html;
 }
 
-// Display roadmap to chat
 async function displayRoadmap(userId = null) {
   const actualUserId = userId || localStorage.getItem("userId");
 
@@ -607,7 +638,6 @@ async function displayRoadmap(userId = null) {
     return;
   }
 
-  // Tampilkan pesan loading
   if (window.addMessage) {
     window.addMessage("📋 Memuat roadmap kamu...", "bot");
   }
@@ -615,10 +645,11 @@ async function displayRoadmap(userId = null) {
   try {
     const storedLpName = (localStorage.getItem("userLearningPath") || "").toLowerCase();
 
-    // Coba ambil dari backend (Supabase via Node)
-    let [roadmap, progress] = await Promise.all([getUserRoadmap(actualUserId), getUserProgress(actualUserId)]);
+    let [roadmap, progress] = await Promise.all([
+      getUserRoadmap(actualUserId),
+      getUserProgress(actualUserId),
+    ]);
 
-    // Pastikan static roadmap data tersedia untuk fallback sinkron dengan LP user
     await ensureStaticRoadmapData();
 
     if (roadmap && storedLpName) {
@@ -631,43 +662,28 @@ async function displayRoadmap(userId = null) {
       }
     }
 
-    // Pastikan roadmap mengikuti learning path user dengan static JSON (kurasi lokal)
     if (staticRoadmapData) {
-      const preferredLpName = storedLpName || (roadmap ? resolveLearningPathName(roadmap.learning_path, roadmap) : "");
+      const preferredLpName =
+        storedLpName ||
+        (roadmap ? resolveLearningPathName(roadmap.learning_path, roadmap) : "");
       if (preferredLpName) {
-        const staticRoadmap = buildRoadmapFromStatic(preferredLpName, (roadmap && roadmap.user_level) || localStorage.getItem("userLevel") || "beginner");
+        const staticRoadmap = buildRoadmapFromStatic(
+          preferredLpName,
+          (roadmap && roadmap.user_level) ||
+            localStorage.getItem("userLevel") ||
+            "beginner"
+        );
         if (staticRoadmap) {
           roadmap = staticRoadmap;
         }
       }
     }
 
-    // Kalau backend tidak punya roadmap, coba bangun dari data lokal
     if (!roadmap) {
       console.log("Backend tidak mengembalikan roadmap, mencoba buildRoadmapFromLocalData() ...");
       roadmap = buildRoadmapFromLocalData();
     }
 
-    // Kalau masih tidak ada tetap kasih pesan "belum tersedia"
-    if (!roadmap) {
-      const chatMessagesEl = document.getElementById("chat-messages");
-      if (chatMessagesEl && chatMessagesEl.lastElementChild) {
-        const lastMsg = chatMessagesEl.lastElementChild;
-        if (lastMsg && lastMsg.textContent && lastMsg.textContent.includes("Memuat roadmap")) {
-          lastMsg.remove();
-        }
-      }
-
-      if (window.addMessage) {
-        window.addMessage("Roadmap belum tersedia. Silakan selesaikan kuis terlebih dahulu untuk mendapatkan roadmap pembelajaran kamu.", "bot");
-      }
-      return;
-    }
-
-    // Roadmap sudah ada (dari backend atau fallback) render
-    const roadmapHTML = formatRoadmapHTML(roadmap, progress || []);
-
-    // Hapus pesan "Memuat..."
     const chatMessagesEl = document.getElementById("chat-messages");
     if (chatMessagesEl && chatMessagesEl.lastElementChild) {
       const lastMsg = chatMessagesEl.lastElementChild;
@@ -675,6 +691,18 @@ async function displayRoadmap(userId = null) {
         lastMsg.remove();
       }
     }
+
+    if (!roadmap) {
+      if (window.addMessage) {
+        window.addMessage(
+          "Roadmap belum tersedia. Silakan selesaikan kuis terlebih dahulu untuk mendapatkan roadmap pembelajaran kamu.",
+          "bot"
+        );
+      }
+      return;
+    }
+
+    const roadmapHTML = formatRoadmapHTML(roadmap, progress || []);
 
     if (window.addMessage) {
       window.addMessage(roadmapHTML, "bot", true);
@@ -691,12 +719,14 @@ async function displayRoadmap(userId = null) {
     }
 
     if (window.addMessage) {
-      window.addMessage("Maaf, terjadi kesalahan saat memuat roadmap. Silakan coba lagi nanti.", "bot");
+      window.addMessage(
+        "Maaf, terjadi kesalahan saat memuat roadmap. Silakan coba lagi nanti.",
+        "bot"
+      );
     }
   }
 }
 
-// Make displayRoadmap globally accessible
 window.displayRoadmap = displayRoadmap;
 
 // =====================================
@@ -726,10 +756,8 @@ function addMessageCore(text, role = "user", isHTML = false, options = {}) {
   return true;
 }
 
-// Make addMessage accessible globally (base implementation)
 window.addMessage = addMessageCore;
 
-// Save chat history to localStorage (make it global)
 window.saveChatHistory = function () {
   const chatMessagesEl = document.getElementById("chat-messages");
   if (!chatMessagesEl) return;
@@ -742,40 +770,44 @@ window.saveChatHistory = function () {
     const isHTML = bubble.innerHTML !== bubble.textContent;
     const content = isHTML ? bubble.innerHTML : bubble.textContent;
 
-    // Skip quiz HTML and welcome messages
-    if (content.includes("start-quiz-welcome-btn") || content.includes("continue-tech-quiz-btn")) {
+    if (
+      content.includes("start-quiz-welcome-btn") ||
+      content.includes("continue-tech-quiz-btn")
+    ) {
       return;
     }
 
     messages.push({ role, content, isHTML });
   });
 
-  // Save per user (or guest) history only
   const key = userId ? `${CHAT_HISTORY_PREFIX}${userId}` : CHAT_HISTORY_GUEST;
   localStorage.setItem(key, JSON.stringify(messages));
 };
 
-// Load chat history from localStorage (make it global)
 window.loadChatHistory = function () {
   const chatMessagesEl = document.getElementById("chat-messages");
   if (!chatMessagesEl) return false;
 
   const userId = localStorage.getItem("userId");
-
-  const savedHistory = localStorage.getItem(userId ? `${CHAT_HISTORY_PREFIX}${userId}` : CHAT_HISTORY_GUEST);
+  const savedHistory = localStorage.getItem(
+    userId ? `${CHAT_HISTORY_PREFIX}${userId}` : CHAT_HISTORY_GUEST
+  );
   if (!savedHistory) return false;
 
   try {
     const messages = JSON.parse(savedHistory);
     if (messages.length === 0) return false;
 
-    // Clear existing messages
     chatMessagesEl.innerHTML = "";
 
-    // Restore messages
     isRestoringHistory = true;
     messages.forEach((msg) => {
-      addMessageCore(msg.content || msg.text || "", msg.role === "user" ? "user" : "bot", !!msg.isHTML, { skipPersist: true });
+      addMessageCore(
+        msg.content || msg.text || "",
+        msg.role === "user" ? "user" : "bot",
+        !!msg.isHTML,
+        { skipPersist: true }
+      );
     });
     isRestoringHistory = false;
 
@@ -787,20 +819,16 @@ window.loadChatHistory = function () {
   }
 };
 
-// Flag to prevent duplicate welcome messages (global)
 window.welcomeMessageShown = false;
 
-// Check quiz status and show welcome message
 window.checkQuizStatusAndWelcome = async function () {
   console.log("checkQuizStatusAndWelcome called");
 
-  // Prevent duplicate calls
   if (window.welcomeMessageShown) {
     console.log("Welcome message already shown, skipping...");
     return;
   }
 
-  // Ensure chatbot is visible first
   const chatbot = document.getElementById("chatbot");
   const landing = document.getElementById("landing");
   if (chatbot && landing) {
@@ -820,7 +848,6 @@ window.checkQuizStatusAndWelcome = async function () {
 
   console.log("chat-messages found, checking for existing messages...");
 
-  // Try to load chat history first
   const historyLoaded = window.loadChatHistory ? window.loadChatHistory() : false;
   const hasMessages = chatMessages.children.length > 0;
 
@@ -831,7 +858,7 @@ window.checkQuizStatusAndWelcome = async function () {
   }
 
   console.log("No messages found, showing welcome...");
-  window.welcomeMessageShown = true; // Set flag before showing message
+  window.welcomeMessageShown = true;
 
   const userId = localStorage.getItem("userId");
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
@@ -841,18 +868,17 @@ window.checkQuizStatusAndWelcome = async function () {
   if (!isLoggedIn || !userId) {
     console.log("User not logged in, showing basic welcome");
     if (window.addMessage) {
-      console.log("Calling addMessage for non-logged user...");
-      const result = window.addMessage("Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis, atau tanyakan sesuatu tentang materi belajar! 😊", "bot");
-      console.log("addMessage result:", result);
-    } else {
-      console.error("window.addMessage is not a function!");
+      window.addMessage(
+        "Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis, atau tanyakan sesuatu tentang materi belajar! 😊",
+        "bot"
+      );
     }
     return;
   }
 
   console.log("User is logged in, checking quiz result...");
   try {
-    const response = await fetch(`http://localhost:5000/user/${userId}/has-quiz-result`);
+    const response = await fetch(`${NODE_API_URL}/user/${userId}/has-quiz-result`);
     console.log("Fetch response status:", response.status);
     const data = await response.json();
     console.log("Quiz result data:", data);
@@ -874,34 +900,26 @@ window.checkQuizStatusAndWelcome = async function () {
         </div>
       `;
       if (window.addMessage) {
-        console.log("Calling addMessage with quiz welcome HTML...");
         window.addMessage(welcomeHTML, "bot", true);
-        console.log("addMessage called for quiz welcome");
-      } else {
-        console.error("window.addMessage is not a function when trying to show quiz welcome!");
       }
 
       setTimeout(() => {
         const btn = document.querySelector(".start-quiz-welcome-btn");
         if (btn) {
-          console.log("Start quiz button found, adding event listener");
           btn.addEventListener("click", () => {
             if (window.showQuizOptions) {
               window.showQuizOptions();
             }
           });
-        } else {
-          console.warn("Start quiz button not found");
         }
       }, 100);
     } else {
       console.log("User already has quiz result, showing welcome back message");
 
-      // Get learning path and level from response or localStorage
-      const learningPath = data.learningPath || localStorage.getItem("userLearningPath") || "";
+      const learningPath =
+        data.learningPath || localStorage.getItem("userLearningPath") || "";
       const userLevel = data.userLevel || localStorage.getItem("userLevel") || "";
 
-      // Update localStorage if we got new data from server
       if (data.learningPath) localStorage.setItem("userLearningPath", data.learningPath);
       if (data.userLevel) localStorage.setItem("userLevel", data.userLevel);
 
@@ -917,20 +935,16 @@ window.checkQuizStatusAndWelcome = async function () {
       }
 
       if (window.addMessage) {
-        console.log("Calling addMessage for returning user...");
         window.addMessage(welcomeMessage, "bot", true);
-        console.log("addMessage called for returning user");
-      } else {
-        console.error("window.addMessage is not a function when trying to show welcome back!");
       }
     }
   } catch (error) {
     console.error("Check quiz status error:", error);
-    console.log("Showing fallback welcome message due to error");
     if (window.addMessage) {
-      window.addMessage("Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis, atau tanyakan sesuatu tentang materi belajar! 😊", "bot");
-    } else {
-      console.error("window.addMessage is not a function in error handler!");
+      window.addMessage(
+        "Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis, atau tanyakan sesuatu tentang materi belajar! 😊",
+        "bot"
+      );
     }
   }
 };
@@ -939,12 +953,10 @@ window.checkQuizStatusAndWelcome = async function () {
 // 3. UI: SIDEBAR + CHATBOT
 // =====================================
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Load data API
   loadAllData();
 
-  // 2. Sidebar toggle
   const sidebar = document.querySelector(".sidebar");
-  const toggleBtn = document.querySelector(".list-icon"); // tombol kotak
+  const toggleBtn = document.querySelector(".list-icon");
 
   if (toggleBtn && sidebar) {
     toggleBtn.addEventListener("click", () => {
@@ -952,30 +964,29 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3. Chatbot
   const chatForm = document.getElementById("chat-form");
   const chatInput = document.getElementById("chat-input");
   const chatMessages = document.getElementById("chat-messages");
 
-  // Welcome message akan dipanggil saat chatbot dibuka (bukan di DOMContentLoaded)
+  window.addMessage = (text, role = "user", isHTML = false, options = {}) =>
+    addMessageCore(text, role, isHTML, options);
 
-  // Use unified addMessage implementation
-  window.addMessage = (text, role = "user", isHTML = false, options = {}) => addMessageCore(text, role, isHTML, options);
-
-  // Restore chat history immediately
   restoreChatHistory();
 
-  // Redirect any chat-related click to login if not logged in
   document.addEventListener("click", (e) => {
-    const trigger = e.target.closest(".quiz-btn, .start-quiz-welcome-btn, #chat-form button, #chat-input, .chat-btn, [data-open-chatbot]");
+    const trigger = e.target.closest(
+      ".quiz-btn, .start-quiz-welcome-btn, #chat-form button, #chat-input, .chat-btn, [data-open-chatbot]"
+    );
     if (!trigger) return;
     requireLoginForChat(e);
   });
 
-  // Make showQuizOptions accessible globally
   window.showQuizOptions = async function () {
     if (window.addMessage) {
-      window.addMessage("Halo! Saya bisa membantu kamu menemukan learning path yang tepat dengan kuis. Pilih jenis kuis yang ingin kamu ikuti:", "bot");
+      window.addMessage(
+        "Halo! Saya bisa membantu kamu menemukan learning path yang tepat dengan kuis. Pilih jenis kuis yang ingin kamu ikuti:",
+        "bot"
+      );
     }
 
     const quizOptions = `
@@ -993,7 +1004,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.addMessage(quizOptions, "bot", true);
     }
 
-    // Add event listeners after a short delay to ensure DOM is ready
     setTimeout(() => {
       document.querySelectorAll(".quiz-btn").forEach((btn) => {
         btn.addEventListener("click", (e) => {
@@ -1006,28 +1016,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 100);
   };
 
-  // Make startQuiz accessible globally
+  window.quizAnswers = {
+    interest: [],
+    tech: {},
+  };
+
   window.startQuiz = async function (quizType) {
     try {
       if (window.addMessage) {
-        window.addMessage(`Memuat kuis ${quizType === "interest" ? "Interest" : "Technical"}...`, "bot");
+        window.addMessage(
+          `Memuat kuis ${quizType === "interest" ? "Interest" : "Technical"}...`,
+          "bot"
+        );
       }
 
-      let endpoint = "http://localhost:5000/quiz/csv/interest/questions";
+      let endpoint = `${NODE_API_URL}/quiz/csv/interest/questions`;
 
       if (quizType === "tech") {
-        const storedLp = localStorage.getItem("userLearningPath") || window.currentLearningPath || "";
+        const storedLp =
+          localStorage.getItem("userLearningPath") || window.currentLearningPath || "";
         const techCategory = mapLearningPathToTechCategory(storedLp);
 
         if (techCategory) {
-          endpoint = `http://localhost:5000/quiz/csv/tech/questions?tech_category=${encodeURIComponent(techCategory)}`;
+          endpoint = `${NODE_API_URL}/quiz/csv/tech/questions?tech_category=${encodeURIComponent(
+            techCategory
+          )}`;
           if (window.addMessage) {
-            window.addMessage(`Menyiapkan soal technical untuk learning path: ${storedLp} (kategori: ${techCategory}).`, "bot");
+            window.addMessage(
+              `Menyiapkan soal technical untuk learning path: ${storedLp} (kategori: ${techCategory}).`,
+              "bot"
+            );
           }
         } else {
-          endpoint = "http://localhost:5000/quiz/csv/tech/questions";
+          endpoint = `${NODE_API_URL}/quiz/csv/tech/questions`;
           if (window.addMessage && storedLp) {
-            window.addMessage(`Learning path "${storedLp}" belum punya kategori khusus, menampilkan soal technical campuran.`, "bot");
+            window.addMessage(
+              `Learning path "${storedLp}" belum punya kategori khusus, menampilkan soal technical campuran.`,
+              "bot"
+            );
           }
         }
       }
@@ -1041,14 +1067,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (quizType === "tech" && Array.isArray(data.questions) && data.questions.length === 0) {
         if (window.addMessage) {
-          window.addMessage("Soal technical untuk learning path kamu belum tersedia. Menampilkan soal campuran sebagai gantinya.", "bot");
+          window.addMessage(
+            "Soal technical untuk learning path kamu belum tersedia. Menampilkan soal campuran sebagai gantinya.",
+            "bot"
+          );
         }
-        const fallbackResponse = await fetch("http://localhost:5000/quiz/csv/tech/questions");
+        const fallbackResponse = await fetch(
+          `${NODE_API_URL}/quiz/csv/tech/questions`
+        );
         const fallbackData = await fallbackResponse.json();
         data.questions = fallbackData.questions || [];
       }
 
-      // Initialize quizAnswers if not exists (to store both interest and tech answers)
       if (!window.quizAnswers) {
         window.quizAnswers = {
           interest: [],
@@ -1056,7 +1086,6 @@ document.addEventListener("DOMContentLoaded", () => {
         };
       }
 
-      // Store questions globally
       window.currentQuiz = {
         type: quizType,
         questions: data.questions,
@@ -1068,12 +1097,14 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Quiz error:", error);
       if (window.addMessage) {
-        window.addMessage(`Maaf, terjadi kesalahan: ${error.message}. Pastikan backend server sudah running.`, "bot");
+        window.addMessage(
+          `Maaf, terjadi kesalahan: ${error.message}. Pastikan backend server sudah running.`,
+          "bot"
+        );
       }
     }
   };
 
-  // Display question
   function displayQuestion(index) {
     const quiz = window.currentQuiz;
     if (!quiz || index >= quiz.questions.length) {
@@ -1081,7 +1112,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Prevent displaying the same question twice
     if (quiz.lastDisplayedIndex === index) {
       console.log("Question already displayed, skipping...");
       return;
@@ -1091,8 +1121,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const question = quiz.questions[index];
     let questionHTML = `
       <div style="margin-bottom: 20px;">
-        <div style="margin-bottom: 12px; font-size: 14px; color: rgba(255, 255, 255, 0.9);"><strong>Pertanyaan ${index + 1}/${quiz.questions.length}</strong></div>
-        <div style="margin-bottom: 18px; font-weight: 500; font-size: 16px; line-height: 1.5;">${question.question_text}</div>
+        <div style="margin-bottom: 12px; font-size: 14px; color: rgba(255, 255, 255, 0.9);"><strong>Pertanyaan ${
+          index + 1
+        }/${quiz.questions.length}</strong></div>
+        <div style="margin-bottom: 18px; font-weight: 500; font-size: 16px; line-height: 1.5;">${
+          question.question_text
+        }</div>
         <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
     `;
 
@@ -1113,21 +1147,17 @@ document.addEventListener("DOMContentLoaded", () => {
       window.addMessage(questionHTML, "bot", true);
     }
 
-    // Add event listeners (only once per button)
     setTimeout(() => {
       document.querySelectorAll(".option-btn").forEach((btn) => {
-        // Skip if button already has event listener
         if (btn.dataset.listenerAdded === "true") {
           return;
         }
         btn.dataset.listenerAdded = "true";
 
-        // Add click event
         btn.addEventListener("click", function (e) {
           e.preventDefault();
           e.stopPropagation();
 
-          // Prevent multiple clicks
           if (this.disabled) return;
 
           const qIndex = parseInt(this.dataset.index);
@@ -1135,7 +1165,6 @@ document.addEventListener("DOMContentLoaded", () => {
           selectAnswer(qIndex, optIndex);
         });
 
-        // Add hover effect styling
         btn.addEventListener("mouseenter", function () {
           if (!this.disabled) {
             this.style.background = "#f0f8ff";
@@ -1155,12 +1184,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 100);
   }
 
-  // Select answer
   function selectAnswer(questionIndex, optionIndex) {
     const quiz = window.currentQuiz;
     if (!quiz) return;
 
-    // Prevent multiple clicks on the same question
     if (quiz.currentIndex !== questionIndex) {
       console.log("Question index mismatch, ignoring click");
       return;
@@ -1169,14 +1196,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const question = quiz.questions[questionIndex];
     const selectedOption = question.options[optionIndex];
 
-    // Disable all buttons to prevent double clicks
     document.querySelectorAll(".option-btn").forEach((btn) => {
       btn.disabled = true;
       btn.style.opacity = "0.6";
       btn.style.cursor = "not-allowed";
     });
 
-    // Store answer in current quiz
     if (quiz.type === "interest") {
       quiz.answers.push(selectedOption.option_text || selectedOption.text);
     } else {
@@ -1184,7 +1209,6 @@ document.addEventListener("DOMContentLoaded", () => {
       quiz.answers[questionText] = selectedOption.text || selectedOption.option_text;
     }
 
-    // Also store in global quizAnswers
     if (!window.quizAnswers) {
       window.quizAnswers = {
         interest: [],
@@ -1193,18 +1217,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (quiz.type === "interest") {
-      window.quizAnswers.interest.push(selectedOption.option_text || selectedOption.text);
+      window.quizAnswers.interest.push(
+        selectedOption.option_text || selectedOption.text
+      );
     } else {
       const questionText = question.question_text;
-      window.quizAnswers.tech[questionText] = selectedOption.text || selectedOption.option_text;
+      window.quizAnswers.tech[questionText] =
+        selectedOption.text || selectedOption.option_text;
     }
 
-    // Show selected answer
     if (window.addMessage) {
-      window.addMessage(`Jawaban: ${selectedOption.option_text || selectedOption.text}`, "user");
+      window.addMessage(
+        `Jawaban: ${selectedOption.option_text || selectedOption.text}`,
+        "user"
+      );
     }
 
-    // Move to next question
     quiz.currentIndex = questionIndex + 1;
 
     if (quiz.currentIndex < quiz.questions.length) {
@@ -1214,26 +1242,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Finish quiz and send to ML
   async function finishQuiz() {
     const quiz = window.currentQuiz;
     if (!quiz) return;
 
     if (window.addMessage) {
-      window.addMessage("Terima kasih! Saya sedang memproses jawabanmu untuk menentukan learning path terbaik...", "bot");
+      window.addMessage(
+        "Terima kasih! Saya sedang memproses jawabanmu untuk menentukan learning path terbaik...",
+        "bot"
+      );
     }
 
     try {
       const userId = localStorage.getItem("userId");
 
-      // Prepare data for ML pipeline using global quizAnswers
       const requestBody = {
         user_interest_answers: (window.quizAnswers && window.quizAnswers.interest) || [],
         user_tech_answers_mcq: (window.quizAnswers && window.quizAnswers.tech) || {},
         student_id: userId || null,
       };
 
-      const response = await fetch("http://localhost:5000/quiz/ml/predict", {
+      const response = await fetch(`${NODE_API_URL}/quiz/ml/predict`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1247,7 +1276,6 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(result.error || "Gagal memproses hasil kuis");
       }
 
-      // Persist chosen learning path early so Technical quiz can be aligned
       if (result.chosen_learning_path) {
         window.currentLearningPath = result.chosen_learning_path;
         localStorage.setItem("userLearningPath", result.chosen_learning_path || "");
@@ -1259,12 +1287,16 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("userInterestCategory", result.interest_category);
       }
 
-      // Check if this is only Interest quiz (no Tech quiz yet)
-      const hasInterest = window.quizAnswers && window.quizAnswers.interest && window.quizAnswers.interest.length > 0;
-      const hasTech = window.quizAnswers && window.quizAnswers.tech && Object.keys(window.quizAnswers.tech).length > 0;
+      const hasInterest =
+        window.quizAnswers &&
+        window.quizAnswers.interest &&
+        window.quizAnswers.interest.length > 0;
+      const hasTech =
+        window.quizAnswers &&
+        window.quizAnswers.tech &&
+        Object.keys(window.quizAnswers.tech).length > 0;
       const isOnlyInterest = hasInterest && !hasTech && quiz.type === "interest";
 
-      // Save result to database if user is logged in (only if both quizzes are done or if it's a complete result)
       let roadmapSaved = false;
       if (userId && result.chosen_learning_path && (hasTech || !isOnlyInterest)) {
         try {
@@ -1274,15 +1306,14 @@ document.addEventListener("DOMContentLoaded", () => {
             user_level: result.detected_level || "beginner",
           });
 
-          // Save roadmap to database (mark that user has completed quiz)
-          const saveResponse = await fetch("http://localhost:5000/user/roadmap/generate", {
+          const saveResponse = await fetch(`${NODE_API_URL}/user/roadmap/generate`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
               user_id: userId,
-              learning_path_name: result.chosen_learning_path, // Use name to find LP ID
+              learning_path_name: result.chosen_learning_path,
               user_level: result.detected_level || "beginner",
             }),
           });
@@ -1295,13 +1326,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const errorData = await saveResponse.json().catch(() => ({}));
             console.error("❌ Error saving roadmap:", saveResponse.status, errorData);
 
-            // Show user-friendly error message
             if (window.addMessage) {
-              window.addMessage(`⚠️ Roadmap tidak bisa disimpan ke database: ${errorData.error || errorData.note || "Learning path tidak ditemukan"}. Roadmap tetap akan ditampilkan dari hasil kuis.`, "bot");
+              window.addMessage(
+                `⚠️ Roadmap tidak bisa disimpan ke database: ${
+                  errorData.error || errorData.note || "Learning path tidak ditemukan"
+                }. Roadmap tetap akan ditampilkan dari hasil kuis.`,
+                "bot"
+              );
             }
           }
 
-          // Save learning path and level to localStorage for quick access
           localStorage.setItem("userLearningPath", result.chosen_learning_path || "");
           localStorage.setItem("userLevel", result.detected_level || "beginner");
           if (result.interest_category) {
@@ -1309,7 +1343,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (saveError) {
           console.error("Error saving roadmap:", saveError);
-          // Continue even if save fails, but still save to localStorage
           localStorage.setItem("userLearningPath", result.chosen_learning_path || "");
           localStorage.setItem("userLevel", result.detected_level || "beginner");
           if (result.interest_category) {
@@ -1318,30 +1351,45 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      // Display results
       let resultHTML = "";
 
       if (isOnlyInterest) {
-        // Show Interest quiz result first (learning path)
         resultHTML = `
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-top: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.15);">
             <h3 style="margin-top: 0; color: white; font-size: 20px;">🎯 Learning Path Kamu</h3>
-            <p style="font-size: 18px; margin: 15px 0; color: white; font-weight: bold;">${result.chosen_learning_path || "Belum ditentukan"}</p>
-            ${result.interest_category ? `<p style="margin-bottom: 0; color: rgba(255,255,255,0.9);">Kategori: ${result.interest_category}</p>` : ""}
+            <p style="font-size: 18px; margin: 15px 0; color: white; font-weight: bold;">${
+              result.chosen_learning_path || "Belum ditentukan"
+            }</p>
+            ${
+              result.interest_category
+                ? `<p style="margin-bottom: 0; color: rgba(255,255,255,0.9);">Kategori: ${result.interest_category}</p>`
+                : ""
+            }
           </div>
         `;
       } else {
-        // Show complete result (both quizzes done)
         resultHTML = `
           <div style="background: #ffffff; padding: 20px; border-radius: 12px; margin-top: 10px; border: 2px solid #23436a; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
             <h3 style="margin-top: 0; color: #23436a; font-size: 20px;">📊 Hasil Kuis Lengkap</h3>
             <div style="color: #000000; line-height: 1.8;">
-              <p style="margin: 12px 0;"><strong style="color: #23436a;">Learning Path yang Direkomendasikan:</strong><br><span style="color: #000000; font-size: 16px;">${result.chosen_learning_path || "Belum ditentukan"}</span></p>
-              ${result.detected_level ? `<p style="margin: 12px 0;"><strong style="color: #23436a;">Level Skill:</strong><br><span style="color: #000000;">${result.detected_level}</span></p>` : ""}
-              ${result.interest_category ? `<p style="margin: 12px 0;"><strong style="color: #23436a;">Kategori Interest:</strong><br><span style="color: #000000;">${result.interest_category}</span></p>` : ""}
+              <p style="margin: 12px 0;"><strong style="color: #23436a;">Learning Path yang Direkomendasikan:</strong><br><span style="color: #000000; font-size: 16px;">${
+                result.chosen_learning_path || "Belum ditentukan"
+              }</span></p>
+              ${
+                result.detected_level
+                  ? `<p style="margin: 12px 0;"><strong style="color: #23436a;">Level Skill:</strong><br><span style="color: #000000;">${result.detected_level}</span></p>`
+                  : ""
+              }
+              ${
+                result.interest_category
+                  ? `<p style="margin: 12px 0;"><strong style="color: #23436a;">Kategori Interest:</strong><br><span style="color: #000000;">${result.interest_category}</span></p>`
+                  : ""
+              }
               ${
                 result.tech_percent_correct !== undefined
-                  ? `<p style="margin: 12px 0;"><strong style="color: #23436a;">Skor Technical:</strong><br><span style="color: #000000; font-size: 18px; font-weight: bold;">${result.tech_percent_correct.toFixed(1)}%</span></p>`
+                  ? `<p style="margin: 12px 0;"><strong style="color: #23436a;">Skor Technical:</strong><br><span style="color: #000000; font-size: 18px; font-weight: bold;">${result.tech_percent_correct.toFixed(
+                      1
+                    )}%</span></p>`
                   : ""
               }
             </div>
@@ -1353,7 +1401,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.addMessage(resultHTML, "bot", true);
       }
 
-      // If only Interest quiz is done, show result and then require Technical quiz
       if (isOnlyInterest) {
         setTimeout(() => {
           const continueHTML = `
@@ -1370,7 +1417,6 @@ document.addEventListener("DOMContentLoaded", () => {
             window.addMessage(continueHTML, "bot", true);
           }
 
-          // Add event listener for button
           setTimeout(() => {
             const continueBtn = document.querySelector(".continue-tech-quiz-btn");
 
@@ -1381,18 +1427,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
               });
 
-              // Auto-scroll to button
               continueBtn.scrollIntoView({ behavior: "smooth", block: "center" });
             }
           }, 100);
         }, 1000);
 
-        // Don't clear quiz answers yet - keep them for when Technical quiz is done
-        // Don't save to database yet - wait until both quizzes are complete
         window.currentQuiz = null;
       } else {
-        // Both quizzes done (Interest + Technical) - Technical quiz just completed
-        // Result already shown above, just show completion message
         const completionHTML = `
           <div style="margin-top: 15px; padding: 15px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4caf50;">
             <p style="margin: 0; color: #2e7d32; font-weight: bold; font-size: 16px;">✅ Hasil kuismu sudah tersimpan!</p>
@@ -1404,19 +1445,17 @@ document.addEventListener("DOMContentLoaded", () => {
           window.addMessage(completionHTML, "bot", true);
         }
 
-        // Display roadmap after quiz completion
-        // Wait a bit longer to ensure roadmap is saved in database, then try to display
         setTimeout(async () => {
           if (userId && window.displayRoadmap) {
-            // Try to display roadmap, with retry if needed
             let retries = 3;
             let roadmapDisplayed = false;
 
             while (retries > 0 && !roadmapDisplayed) {
-              console.log(`Attempting to display roadmap (retry ${4 - retries}/3)...`);
+              console.log(
+                `Attempting to display roadmap (retry ${4 - retries}/3)...`
+              );
               await window.displayRoadmap(userId);
 
-              // Check if roadmap was displayed (by checking last message)
               await new Promise((resolve) => setTimeout(resolve, 1000));
 
               const chatMessagesEl = document.getElementById("chat-messages");
@@ -1425,20 +1464,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 const lastText = lastMsg.textContent || "";
                 const lastHTML = lastMsg.innerHTML || "";
 
-                // If it says roadmap is not available, try again
-                if (lastText.includes("Roadmap belum tersedia") || lastText.includes("Memuat roadmap")) {
+                if (
+                  lastText.includes("Roadmap belum tersedia") ||
+                  lastText.includes("Memuat roadmap")
+                ) {
                   if (retries > 1) {
-                    // Remove the "not available" message and try again
                     console.log("Roadmap not found, retrying...");
                     lastMsg.remove();
                     await new Promise((resolve) => setTimeout(resolve, 1500));
                   }
-                } else if (lastHTML.includes("Roadmap Pembelajaran") || lastHTML.includes("Modul Pembelajaran")) {
-                  // Roadmap was successfully displayed
+                } else if (
+                  lastHTML.includes("Roadmap Pembelajaran") ||
+                  lastHTML.includes("Modul Pembelajaran")
+                ) {
                   console.log("Roadmap displayed successfully");
                   roadmapDisplayed = true;
                 } else {
-                  // Some other message, assume it worked
                   roadmapDisplayed = true;
                 }
               } else {
@@ -1450,7 +1491,6 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }, 2500);
 
-        // Clear quiz and answers after both are complete
         window.currentQuiz = null;
         window.quizAnswers = {
           interest: [],
@@ -1461,11 +1501,13 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("ML prediction error:", error);
       let errorMessage = `Maaf, terjadi kesalahan saat memproses hasil: ${error.message}`;
 
-      // Check if it's a connection error
-      if (error.message.includes("fetch") || error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-        errorMessage = `Maaf, tidak dapat terhubung ke server. Pastikan backend server sudah running di port 5000 dan ML server sudah running di port 8000.`;
-      } else if (error.message.includes("503") || error.message.includes("ML server")) {
-        errorMessage = `Maaf, ML server tidak dapat diakses. Pastikan ML server sudah running di port 8000. Coba jalankan: python ml_server.py`;
+      if (
+        error.message.includes("fetch") ||
+        error.message.includes("Failed to fetch") ||
+        error.message.includes("NetworkError")
+      ) {
+        errorMessage =
+          "Maaf, tidak dapat terhubung ke server. Pastikan backend server dan ML server sudah berjalan.";
       }
 
       if (window.addMessage) {
@@ -1473,9 +1515,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   }
-
-  // checkQuizStatusAndWelcome sudah didefinisikan di luar DOMContentLoaded (line 207)
-  // Tidak perlu didefinisikan lagi di sini
 
   if (chatForm && chatInput && chatMessages) {
     chatForm.addEventListener("submit", async (e) => {
@@ -1485,7 +1524,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const text = chatInput.value.trim();
       if (!text) return;
 
-      // tampilkan pesan user
       if (window.addMessage) {
         window.addMessage(text, "user");
       }
@@ -1493,28 +1531,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
       console.log("User tanya:", text);
 
-      // Check if user wants to start quiz
       const textLower = text.toLowerCase();
-      if (textLower.includes("kuis") || textLower.includes("quiz") || textLower.includes("test") || textLower.includes("mulai kuis")) {
+      if (
+        textLower.includes("kuis") ||
+        textLower.includes("quiz") ||
+        textLower.includes("test") ||
+        textLower.includes("mulai kuis")
+      ) {
         if (window.showQuizOptions) {
           window.showQuizOptions();
         }
         return;
       }
 
-      // Check if user asks about roadmap
       if (
         textLower.includes("roadmap") ||
         textLower.includes("peta belajar") ||
         textLower.includes("rencana belajar") ||
-        (textLower.includes("modul") && (textLower.includes("apa") || textLower.includes("mana") || textLower.includes("harus") || textLower.includes("pelajari")))
+        (textLower.includes("modul") &&
+          (textLower.includes("apa") ||
+            textLower.includes("mana") ||
+            textLower.includes("harus") ||
+            textLower.includes("pelajari")))
       ) {
         const userId = localStorage.getItem("userId");
         if (userId && window.displayRoadmap) {
           await window.displayRoadmap(userId);
         } else {
           if (window.addMessage) {
-            window.addMessage("Silakan login dan selesaikan kuis terlebih dahulu untuk melihat roadmap pembelajaran kamu.", "bot");
+            window.addMessage(
+              "Silakan login dan selesaikan kuis terlebih dahulu untuk melihat roadmap pembelajaran kamu.",
+              "bot"
+            );
           }
         }
         return;
@@ -1527,34 +1575,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const datasetReply = getAnswerFromDicoding(text);
         console.log("Jawaban bot dari dataset:", datasetReply);
 
-        // Check if dataset found a relevant answer (not a "not found" message)
-        if (datasetReply && !datasetReply.includes("tidak menemukan") && !datasetReply.includes("belum bisa menjawab") && !datasetReply.includes("Belum ada deskripsi yang jelas di data")) {
+        if (
+          datasetReply &&
+          !datasetReply.includes("tidak menemukan") &&
+          !datasetReply.includes("belum bisa menjawab") &&
+          !datasetReply.includes("Belum ada deskripsi yang jelas di data")
+        ) {
           reply = datasetReply;
         } else {
-          // Dataset didn't find relevant answer, use AI
           useAI = true;
           console.log("Dataset tidak menemukan jawaban yang relevan, menggunakan AI...");
         }
       } catch (err) {
         console.error("Error di getAnswerFromDicoding:", err);
-        useAI = true; // Use AI fallback on error
+        useAI = true;
       }
 
-      // If no answer from dataset or need to use AI, call AI
       if (useAI || !reply) {
         console.log("Memanggil AI untuk menjawab pertanyaan...");
 
-        // Show loading message
         if (window.addMessage) {
           window.addMessage("💭 Sedang memproses pertanyaanmu...", "bot");
         }
 
-        // Get user context for AI
         const learningPath = localStorage.getItem("userLearningPath") || "";
         const userLevel = localStorage.getItem("userLevel") || "";
         const interestCategory = localStorage.getItem("userInterestCategory") || "";
 
-        // Build context-aware prompt
         let aiPrompt = text;
         let contextInfo = "";
 
@@ -1575,54 +1622,63 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-          const aiResponse = await fetch("http://localhost:5000/chat", {
+          const aiResponse = await fetch(`${NODE_API_URL}/chat`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ message: aiPrompt }),
-            timeout: 30000, // 30 second timeout
           });
+
+          const chatMessagesEl = document.getElementById("chat-messages");
 
           if (aiResponse.ok) {
             const aiData = await aiResponse.json();
             let aiReply = aiData.reply || "Maaf, saya tidak bisa menjawab saat ini.";
-
-            // Format AI reply to be more readable
             aiReply = formatAIResponse(aiReply);
             reply = aiReply;
 
-            // Remove loading message and show AI reply
-            const chatMessagesEl = document.getElementById("chat-messages");
             if (chatMessagesEl && chatMessagesEl.lastElementChild) {
               const lastMsg = chatMessagesEl.lastElementChild;
-              if (lastMsg && lastMsg.textContent && lastMsg.textContent.includes("Sedang memproses")) {
+              if (
+                lastMsg &&
+                lastMsg.textContent &&
+                lastMsg.textContent.includes("Sedang memproses")
+              ) {
                 lastMsg.remove();
               }
             }
           } else {
             const errorData = await aiResponse.json().catch(() => ({}));
             console.error("AI response error:", errorData);
-            reply = errorData.error || "Maaf, terjadi kesalahan saat menghubungi AI. Pastikan OPENAI_API_KEY sudah di-set di backend.";
+            reply =
+              errorData.error ||
+              "Maaf, terjadi kesalahan saat menghubungi AI. Pastikan OPENAI_API_KEY sudah di-set di backend.";
 
-            // Remove loading message
-            const chatMessagesEl = document.getElementById("chat-messages");
             if (chatMessagesEl && chatMessagesEl.lastElementChild) {
               const lastMsg = chatMessagesEl.lastElementChild;
-              if (lastMsg && lastMsg.textContent && lastMsg.textContent.includes("Sedang memproses")) {
+              if (
+                lastMsg &&
+                lastMsg.textContent &&
+                lastMsg.textContent.includes("Sedang memproses")
+              ) {
                 lastMsg.remove();
               }
             }
           }
         } catch (aiError) {
           console.error("AI error:", aiError);
-          reply = "Maaf, terjadi kesalahan saat menghubungi AI. Pastikan:\n1. Backend server sudah running di port 5000\n2. OPENAI_API_KEY sudah di-set di file .env backend";
+          reply =
+            "Maaf, terjadi kesalahan saat menghubungi AI. Pastikan backend sudah berjalan dan OPENAI_API_KEY sudah di-set di file .env backend";
 
-          // Remove loading message
           const chatMessagesEl = document.getElementById("chat-messages");
           if (chatMessagesEl && chatMessagesEl.lastElementChild) {
             const lastMsg = chatMessagesEl.lastElementChild;
-            if (lastMsg && lastMsg.textContent && lastMsg.textContent.includes("Sedang memproses")) {
+            if (
+              lastMsg &&
+              lastMsg.textContent &&
+              lastMsg.textContent.includes("Sedang memproses")
+            ) {
               lastMsg.remove();
             }
           }
@@ -1630,13 +1686,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       if (window.addMessage && reply) {
-        // Check if reply contains HTML (from AI formatting)
-        const isHTML = reply.includes("<div") || reply.includes("<p") || reply.includes("<ul") || reply.includes("<li") || reply.includes("<strong");
+        const isHTML =
+          reply.includes("<div") ||
+          reply.includes("<p") ||
+          reply.includes("<ul") ||
+          reply.includes("<li") ||
+          reply.includes("<strong");
         window.addMessage(reply, "bot", isHTML);
       }
     });
   } else {
-    console.warn("Elemen chat belum lengkap (chat-form / chat-input / chat-messages tidak ditemukan).");
+    console.warn(
+      "Elemen chat belum lengkap (chat-form / chat-input / chat-messages tidak ditemukan)."
+    );
   }
 });
 
@@ -1645,14 +1707,11 @@ function openChatbot() {
   document.getElementById("landing").style.display = "none";
   document.getElementById("chatbot").style.display = "block";
 
-  // Reset welcome flag when opening chatbot (in case user closes and reopens)
   const chatMessages = document.getElementById("chat-messages");
   if (chatMessages && chatMessages.children.length === 0) {
     window.welcomeMessageShown = false;
   }
 
-  // Check quiz status and show welcome message immediately when chatbot opens
-  // Wait a bit longer to ensure DOM is ready
   setTimeout(() => {
     console.log("Checking for welcome message...");
     if (typeof window.checkQuizStatusAndWelcome === "function") {
@@ -1660,10 +1719,12 @@ function openChatbot() {
       window.checkQuizStatusAndWelcome();
     } else {
       console.log("checkQuizStatusAndWelcome not found, using fallback");
-      // Fallback: show simple welcome if function not ready
       if (chatMessages && chatMessages.children.length === 0 && !window.welcomeMessageShown) {
         if (window.addMessage) {
-          window.addMessage("Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis! 😊", "bot");
+          window.addMessage(
+            "Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis! 😊",
+            "bot"
+          );
           window.welcomeMessageShown = true;
         } else {
           console.error("addMessage function not found!");
@@ -1673,10 +1734,12 @@ function openChatbot() {
   }, 500);
 }
 
-// Verify functions are defined at the end of script
 (function () {
   console.log("=== Script.js Loaded ===");
-  console.log("checkQuizStatusAndWelcome type:", typeof window.checkQuizStatusAndWelcome);
+  console.log(
+    "checkQuizStatusAndWelcome type:",
+    typeof window.checkQuizStatusAndWelcome
+  );
   console.log("addMessage type:", typeof window.addMessage);
   console.log("openChatbot type:", typeof openChatbot);
 
@@ -1685,7 +1748,6 @@ function openChatbot() {
   }
 })();
 
-// Setup event listeners when DOM is ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     const startBtn = document.getElementById("startChatBtn");
@@ -1694,7 +1756,6 @@ if (document.readyState === "loading") {
     if (chatIcon) chatIcon.onclick = openChatbot;
   });
 } else {
-  // DOM already loaded
   const startBtn = document.getElementById("startChatBtn");
   const chatIcon = document.getElementById("chatIcon");
   if (startBtn) startBtn.onclick = openChatbot;
