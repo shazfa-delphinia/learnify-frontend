@@ -595,3 +595,47 @@ body {
   transform: translateY(0);
   pointer-events: auto;
 }
+/* =========================
+   MOBILE FIX: input chat selalu kelihatan
+   taruh PALING BAWAH
+   ========================= */
+
+/* gunakan dynamic viewport height untuk mobile browser */
+#chatbot,
+.layout,
+.chat-panel {
+  height: 100dvh;          /* modern mobile */
+  min-height: 100dvh;
+}
+
+/* penting: biar area chat bisa scroll di dalam flex column
+   dan tidak mendorong input keluar layar */
+.chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;           /* ✅ INI KUNCINYA */
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+/* bikin input nempel bawah & aman dari safe-area */
+#chat-form.input-area,
+.input-area {
+  position: sticky;
+  bottom: 0;
+  margin: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 50;
+}
+
+/* biar nggak terlalu gede di mobile */
+@media (max-width: 768px) {
+  .input-area {
+    height: 54px;
+    border-radius: 14px;
+    gap: 12px;
+  }
+
+  .input-area input {
+    font-size: 15px;
+  }
+}
