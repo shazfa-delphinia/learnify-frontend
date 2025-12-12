@@ -555,10 +555,57 @@ body, html {
     z-index: 999999 !important;
 }
 
-#landing {
-    display: none !important;
-}
-
 .navbar {
     z-index: 1 !important;
 }
+
+/****************************************************
+ *  FIX CHATBOT Z-INDEX & CLICKABLE INPUT AREA
+ *  (WAJIB DITARUH PALING BAWAH)
+ ****************************************************/
+
+/* Pastikan landing page tampil normal */
+#landing {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Pastikan chatbot berada di atas layer lain */
+#chatbot {
+    position: relative !important;
+    z-index: 10000 !important;
+    display: none; /* default tetap hidden sampai diklik */
+}
+
+/* Agar input & tombol SEND tidak tertutup elemen lain */
+.input-area {
+    position: relative !important;
+    z-index: 20000 !important;
+}
+
+/* Tombol SEND */
+.send {
+    position: relative !important;
+    z-index: 30000 !important;
+    pointer-events: auto !important; /* pastikan bisa diklik */
+}
+
+/* Chat form */
+#chat-form {
+    position: relative !important;
+    z-index: 30000 !important;
+}
+
+/* Bubble chat selalu terlihat */
+.chat-messages {
+    position: relative !important;
+    z-index: 15000 !important;
+}
+
+/* Perbaikan umum elemen yang tidak boleh menghalangi area input */
+nav, .navbar, .landing-container {
+    z-index: 1 !important;
+}
+
+
