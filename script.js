@@ -395,6 +395,7 @@ function formatAIResponse(text) {
   formatted = `<div style="color: #ffffff; line-height: 1.7;">${formatted}</div>`;
   return formatted;
 }
+  window.formatAIResponse = formatAIResponse;
 
 // =====================================
 // ROADMAP FUNCTIONS
