@@ -947,40 +947,78 @@ window.checkQuizStatusAndWelcome = async function () {
 // =====================================
 // 3. UI: SIDEBAR + CHATBOT
 // =====================================
+// ===============================
+// OPEN CHATBOT (GLOBAL)
+// ===============================
+function openChatbot(e) {
+  if (e) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+  }
+
+  if (!requireLoginForChat(e)) return;
+
+  const landing = document.getElementById("landing");
+  const chatbot = document.getElementById("chatbot");
+  const chatMessages = document.getElementById("chat-messages");
+
+  if (landing) landing.style.display = "none";
+  if (chatbot) chatbot.style.display = "block";
+
+  if (chatMessages && chatMessages.children.length === 0) {
+    window.welcomeMessageShown = false;
+  }
+
+  setTimeout(() => {
+    if (typeof window.checkQuizStatusAndWelcome === "function") {
+      window.checkQuizStatusAndWelcome();
+    } else {
+      if (chatMessages && chatMessages.children.length === 0 && typeof window.addMessage === "function") {
+        window.addMessage("Halo! Saya Learning Buddy. Ketik 'kuis' untuk memulai kuis 😊", "bot");
+        window.welcomeMessageShown = true;
+      }
+    }
+  }, 300);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   loadAllData();
 
   const sidebar = document.querySelector(".sidebar");
   const toggleBtn = document.querySelector(".list-icon");
-
   if (toggleBtn && sidebar) {
-    toggleBtn.addEventListener("click", () => {
-      sidebar.classList.toggle("minimized");
-    });
+    toggleBtn.addEventListener("click", () => sidebar.classList.toggle("minimized"));
   }
 
+  // ✅ WAJIB: deklarasi elemen dulu sebelum dipakai
   const chatForm = document.getElementById("chat-form");
   const chatInput = document.getElementById("chat-input");
   const chatMessages = document.getElementById("chat-messages");
 
-  // ===============================
-// CHAT FORM HANDLER (UI ONLY)
-// ===============================
-if (chatForm && chatInput && chatMessages) {
-    chatForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        if (!requireLoginForChat(e)) return;
-        // seluruh logika chat pindah ke chat.js
-    });
-} else {
-    console.warn("Chat elements not found.");
-}
+  // Bind tombol chat
+  const startBtn = document.getElementById("startChatBtn");
+  const chatIcon = document.getElementById("chatIcon");
+  if (startBtn) startBtn.addEventListener("click", openChatbot);
+  if (chatIcon) chatIcon.addEventListener("click", openChatbot);
 
+  // UI only (biar chat.js yang handle logic)
+  if (chatForm && chatInput && chatMessages) {
+    chatForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!requireLoginForChat(e)) return;
+      // chat.js handle sisanya
+    });
+  } else {
+    console.warn("Chat elements not found.");
+  }
+
+  // Pastikan addMessage tetap ada
   window.addMessage = (text, role = "user", isHTML = false, options = {}) =>
     addMessageCore(text, role, isHTML, options);
 
   restoreChatHistory();
 
+  // Login guard klik tertentu
   document.addEventListener("click", (e) => {
     const trigger = e.target.closest(
       ".quiz-btn, .start-quiz-welcome-btn, #chat-form button, #chat-input, .chat-btn, [data-open-chatbot]"
@@ -988,6 +1026,8 @@ if (chatForm && chatInput && chatMessages) {
     if (!trigger) return;
     requireLoginForChat(e);
   });
+});
+
 
   window.showQuizOptions = async function () {
     if (window.addMessage) {
@@ -1525,63 +1565,38 @@ if (chatForm && chatInput && chatMessages) {
     }
   }
 
-function openChatbot() {
-  if (!requireLoginForChat()) return;
-  document.getElementById("landing").style.display = "none";
-  document.getElementById("chatbot").style.display = "block";
+function openChatbot(e) {
+  // kalau handler click ngirim event, stop biar gak ke-trigger handler lain
+  if (e) {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+  }
 
+  if (!requireLoginForChat(e)) return;
+
+  const landing = document.getElementById("landing");
+  const chatbot = document.getElementById("chatbot");
   const chatMessages = document.getElementById("chat-messages");
+
+  if (landing) landing.style.display = "none";
+  if (chatbot) chatbot.style.display = "block";
+
   if (chatMessages && chatMessages.children.length === 0) {
     window.welcomeMessageShown = false;
   }
 
   setTimeout(() => {
-    console.log("Checking for welcome message...");
     if (typeof window.checkQuizStatusAndWelcome === "function") {
-      console.log("Calling checkQuizStatusAndWelcome...");
       window.checkQuizStatusAndWelcome();
     } else {
-      console.log("checkQuizStatusAndWelcome not found, using fallback");
-      if (chatMessages && chatMessages.children.length === 0 && !window.welcomeMessageShown) {
-        if (window.addMessage) {
-          window.addMessage(
-            "Halo! Saya Learning Buddy. Saya bisa membantu kamu menemukan learning path yang tepat. Ketik 'kuis' untuk memulai kuis! 😊",
-            "bot"
-          );
-          window.welcomeMessageShown = true;
-        } else {
-          console.error("addMessage function not found!");
-        }
+      // fallback biar nggak blank
+      if (chatMessages && chatMessages.children.length === 0 && typeof window.addMessage === "function") {
+        window.addMessage(
+          "Halo! Saya Learning Buddy. Ketik 'kuis' untuk memulai kuis 😊",
+          "bot"
+        );
+        window.welcomeMessageShown = true;
       }
     }
-  }, 500);
-}
-
-(function () {
-  console.log("=== Script.js Loaded ===");
-  console.log(
-    "checkQuizStatusAndWelcome type:",
-    typeof window.checkQuizStatusAndWelcome
-  );
-  console.log("addMessage type:", typeof window.addMessage);
-  console.log("openChatbot type:", typeof openChatbot);
-
-  if (typeof window.checkQuizStatusAndWelcome !== "function") {
-    console.error("ERROR: checkQuizStatusAndWelcome is not a function!");
-  }
-  });
-})();
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    const startBtn = document.getElementById("startChatBtn");
-    const chatIcon = document.getElementById("chatIcon");
-    if (startBtn) startBtn.onclick = openChatbot;
-    if (chatIcon) chatIcon.onclick = openChatbot;
-  });
-} else {
-  const startBtn = document.getElementById("startChatBtn");
-  const chatIcon = document.getElementById("chatIcon");
-  if (startBtn) startBtn.onclick = openChatbot;
-  if (chatIcon) chatIcon.onclick = openChatbot;
+  }, 300);
 }
