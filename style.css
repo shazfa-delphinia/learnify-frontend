@@ -608,4 +608,11 @@ nav, .navbar, .landing-container {
     z-index: 1 !important;
 }
 
+/* Fix kecil agar tombol SEND selalu bisa diklik */
+.input-area, #chat-form, .send {
+    pointer-events: auto !important;
+    position: relative;
+    z-index: 5;
+}
+
 
