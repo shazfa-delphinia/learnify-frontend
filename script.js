@@ -1001,17 +1001,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (startBtn) startBtn.addEventListener("click", openChatbot);
   if (chatIcon) chatIcon.addEventListener("click", openChatbot);
 
-  // UI only (biar chat.js yang handle logic)
-  if (chatForm && chatInput && chatMessages) {
-    chatForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      if (!requireLoginForChat(e)) return;
-      // chat.js handle sisanya
-    });
-  } else {
-    console.warn("Chat elements not found.");
-  }
-
   // Pastikan addMessage tetap ada
   window.addMessage = (text, role = "user", isHTML = false, options = {}) =>
     addMessageCore(text, role, isHTML, options);

@@ -529,3 +529,30 @@ body {
   transform: translateY(0);
   pointer-events: auto;
 }
+
+/* === CHAT WIDTH FIX: bikin area chat gak selebar layar === */
+.chat-panel {
+  align-items: center;            /* center konten */
+}
+
+.chat-header,
+.chat-messages,
+#chat-form.input-area {
+  width: min(900px, 100%);        /* batas maksimal */
+}
+
+#chat-form.input-area {
+  margin: 18px auto;              /* center + rapih */
+}
+
+/* Mobile: biar gak kepotong */
+@media (max-width: 600px) {
+  #chat-form.input-area {
+    margin: 12px;
+    width: calc(100% - 24px);
+  }
+  .chat-header,
+  .chat-messages {
+    width: 100%;
+  }
+}
