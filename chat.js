@@ -1,92 +1,73 @@
-/************************************************************
- *  FINAL CHAT.JS — AI FIRST, FALLBACK KE DATASET
- ************************************************************/
-
 console.log("=== Chat.js Loaded ===");
 
-// Pastikan elemen tersedia
+// Elemen UI
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatMessages = document.getElementById("chat-messages");
 
-// Hapus event listener lama yang mungkin ditambahkan script.js
-chatForm.replaceWith(chatForm.cloneNode(true)); 
-// lalu ambil ulang elemennya
-const form = document.getElementById("chat-form");
-
-
-// ========== Fungsi Tambah Bubble Chat ==========
-function addMessage(text, role = "user") {
+// ========== Tambah bubble chat ==========
+window.addMessage = function (text, role = "user", isHTML = false) {
     const bubble = document.createElement("div");
     bubble.classList.add("bubble", role === "user" ? "bubble-user" : "bubble-bot");
-    bubble.textContent = text;
+
+    if (isHTML) bubble.innerHTML = text;
+    else bubble.textContent = text;
+
     chatMessages.appendChild(bubble);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+};
 
-
-// ========== Fungsi Kirim ke Backend OpenAI ==========
-async function sendToAI(userMessage) {
+// ========== Kirim ke Backend (OpenAI) ==========
+async function sendToAI(prompt) {
     try {
-        const response = await fetch(`${NODE_API_URL}/chat`, {
+        const res = await fetch(`${NODE_API_URL}/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: userMessage })
+            body: JSON.stringify({ message: prompt })
         });
 
-        const data = await response.json();
+        const data = await res.json();
         return data.reply || null;
     } catch (err) {
-        console.error("AI Fetch Error:", err);
+        console.error("AI error:", err);
         return null;
     }
 }
 
+// ========== Chat Handler ==========
+if (chatForm) {
+    chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-// ========== Fallback ke Dataset (fungsi dari script.js) ==========
-function fallbackDataset(userText) {
-    if (typeof getBestAnswerFromDataset === "function") {
-        return getBestAnswerFromDataset(userText);
-    }
-    return "Maaf, aku belum bisa menemukan jawaban.";
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        // bubble user
+        window.addMessage(text, "user");
+        chatInput.value = "";
+
+        // bubble loading
+        const loading = document.createElement("div");
+        loading.classList.add("bubble", "bubble-bot");
+        loading.textContent = "Sedang memproses...";
+        chatMessages.appendChild(loading);
+
+        // ===== AI FIRST =====
+        const aiReply = await sendToAI(text);
+
+        loading.remove();
+
+        if (aiReply) {
+            window.addMessage(aiReply, "bot");
+            return;
+        }
+
+        // ===== FALLBACK DATASET =====
+        if (typeof getAnswerFromDicoding === "function") {
+            const fallback = getAnswerFromDicoding(text);
+            window.addMessage(fallback, "bot");
+        } else {
+            window.addMessage("Maaf, aku belum bisa menjawab pertanyaan itu.", "bot");
+        }
+    });
 }
-
-
-// ========== Event Submit Chat ==========
-form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const text = chatInput.value.trim();
-    if (!text) return;
-
-    // tampilkan pesan user
-    addMessage(text, "user");
-    chatInput.value = "";
-
-    // loading bubble
-    const loadingBubble = document.createElement("div");
-    loadingBubble.classList.add("bubble", "bubble-bot");
-    loadingBubble.textContent = "Sedang memikirkan jawaban...";
-    chatMessages.appendChild(loadingBubble);
-
-
-    // =====================
-    // 1️⃣ Coba jawab pakai AI
-    // =====================
-    const aiReply = await sendToAI(text);
-
-    // Hapus loading
-    loadingBubble.remove();
-
-    if (aiReply) {
-        addMessage(aiReply, "bot");
-        return;
-    }
-
-    // =====================
-    // 2️⃣ AI gagal → fallback dataset
-    // =====================
-    const datasetReply = fallbackDataset(text);
-    addMessage(datasetReply, "bot");
-});
-
