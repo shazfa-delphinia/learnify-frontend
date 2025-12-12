@@ -1,3 +1,5 @@
+window.LEARNIFY_CHAT_OVERRIDE = true;
+
 // =====================================
 // 1. KONFIG API DICODING
 // =====================================
@@ -961,6 +963,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatInput = document.getElementById("chat-input");
   const chatMessages = document.getElementById("chat-messages");
 
+  // ===============================
+// CHAT FORM HANDLER (UI ONLY)
+// ===============================
+if (chatForm && chatInput && chatMessages) {
+    chatForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (!requireLoginForChat(e)) return;
+        // seluruh logika chat pindah ke chat.js
+    });
+} else {
+    console.warn("Chat elements not found.");
+}
+
   window.addMessage = (text, role = "user", isHTML = false, options = {}) =>
     addMessageCore(text, role, isHTML, options);
 
@@ -1510,192 +1525,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  if (chatForm && chatInput && chatMessages) {
-    chatForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!requireLoginForChat(e)) return;
-
-      const text = chatInput.value.trim();
-      if (!text) return;
-
-      if (window.addMessage) {
-        window.addMessage(text, "user");
-      }
-      chatInput.value = "";
-
-      console.log("User tanya:", text);
-
-      const textLower = text.toLowerCase();
-      if (
-        textLower.includes("kuis") ||
-        textLower.includes("quiz") ||
-        textLower.includes("test") ||
-        textLower.includes("mulai kuis")
-      ) {
-        if (window.showQuizOptions) {
-          window.showQuizOptions();
-        }
-        return;
-      }
-
-      if (
-        textLower.includes("roadmap") ||
-        textLower.includes("peta belajar") ||
-        textLower.includes("rencana belajar") ||
-        (textLower.includes("modul") &&
-          (textLower.includes("apa") ||
-            textLower.includes("mana") ||
-            textLower.includes("harus") ||
-            textLower.includes("pelajari")))
-      ) {
-        const userId = localStorage.getItem("userId");
-        if (userId && window.displayRoadmap) {
-          await window.displayRoadmap(userId);
-        } else {
-          if (window.addMessage) {
-            window.addMessage(
-              "Silakan login dan selesaikan kuis terlebih dahulu untuk melihat roadmap pembelajaran kamu.",
-              "bot"
-            );
-          }
-        }
-        return;
-      }
-
-      let reply = null;
-      let useAI = false;
-
-      try {
-        const datasetReply = getAnswerFromDicoding(text);
-        console.log("Jawaban bot dari dataset:", datasetReply);
-
-        if (
-          datasetReply &&
-          !datasetReply.includes("tidak menemukan") &&
-          !datasetReply.includes("belum bisa menjawab") &&
-          !datasetReply.includes("Belum ada deskripsi yang jelas di data")
-        ) {
-          reply = datasetReply;
-        } else {
-          useAI = true;
-          console.log("Dataset tidak menemukan jawaban yang relevan, menggunakan AI...");
-        }
-      } catch (err) {
-        console.error("Error di getAnswerFromDicoding:", err);
-        useAI = true;
-      }
-
-      if (useAI || !reply) {
-        console.log("Memanggil AI untuk menjawab pertanyaan...");
-
-        if (window.addMessage) {
-          window.addMessage("💭 Sedang memproses pertanyaanmu...", "bot");
-        }
-
-        const learningPath = localStorage.getItem("userLearningPath") || "";
-        const userLevel = localStorage.getItem("userLevel") || "";
-        const interestCategory = localStorage.getItem("userInterestCategory") || "";
-
-        let aiPrompt = text;
-        let contextInfo = "";
-
-        if (learningPath) {
-          contextInfo += `Learning path user: ${learningPath}. `;
-        }
-        if (userLevel) {
-          contextInfo += `Level skill user: ${userLevel}. `;
-        }
-        if (interestCategory) {
-          contextInfo += `Kategori interest: ${interestCategory}. `;
-        }
-
-        if (contextInfo) {
-          aiPrompt = `Kamu adalah Learning Buddy, asisten belajar yang membantu user. ${contextInfo}User bertanya: "${text}"\n\nJawab dengan ramah, informatif, dan relevan. Jika pertanyaan tentang gaji, karir, atau hal umum, jawab dengan baik. Jika tentang materi belajar, fokus pada learning path mereka.\n\nFormat jawabanmu dengan rapi:\n- Gunakan **teks tebal** untuk poin penting\n- Gunakan nomor (1. 2. 3.) untuk list\n- Buat paragraf yang jelas dengan spasi antar paragraf`;
-        } else {
-          aiPrompt = `Kamu adalah Learning Buddy, asisten belajar. User bertanya: "${text}"\n\nJawab dengan ramah dan informatif.\n\nFormat jawabanmu dengan rapi:\n- Gunakan **teks tebal** untuk poin penting\n- Gunakan nomor (1. 2. 3.) untuk list\n- Buat paragraf yang jelas dengan spasi antar paragraf`;
-        }
-
-        try {
-          const aiResponse = await fetch(`${NODE_API_URL}/chat`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ message: aiPrompt }),
-          });
-
-          const chatMessagesEl = document.getElementById("chat-messages");
-
-          if (aiResponse.ok) {
-            const aiData = await aiResponse.json();
-            let aiReply = aiData.reply || "Maaf, saya tidak bisa menjawab saat ini.";
-            aiReply = formatAIResponse(aiReply);
-            reply = aiReply;
-
-            if (chatMessagesEl && chatMessagesEl.lastElementChild) {
-              const lastMsg = chatMessagesEl.lastElementChild;
-              if (
-                lastMsg &&
-                lastMsg.textContent &&
-                lastMsg.textContent.includes("Sedang memproses")
-              ) {
-                lastMsg.remove();
-              }
-            }
-          } else {
-            const errorData = await aiResponse.json().catch(() => ({}));
-            console.error("AI response error:", errorData);
-            reply =
-              errorData.error ||
-              "Maaf, terjadi kesalahan saat menghubungi AI. Pastikan OPENAI_API_KEY sudah di-set di backend.";
-
-            if (chatMessagesEl && chatMessagesEl.lastElementChild) {
-              const lastMsg = chatMessagesEl.lastElementChild;
-              if (
-                lastMsg &&
-                lastMsg.textContent &&
-                lastMsg.textContent.includes("Sedang memproses")
-              ) {
-                lastMsg.remove();
-              }
-            }
-          }
-        } catch (aiError) {
-          console.error("AI error:", aiError);
-          reply =
-            "Maaf, terjadi kesalahan saat menghubungi AI. Pastikan backend sudah berjalan dan OPENAI_API_KEY sudah di-set di file .env backend";
-
-          const chatMessagesEl = document.getElementById("chat-messages");
-          if (chatMessagesEl && chatMessagesEl.lastElementChild) {
-            const lastMsg = chatMessagesEl.lastElementChild;
-            if (
-              lastMsg &&
-              lastMsg.textContent &&
-              lastMsg.textContent.includes("Sedang memproses")
-            ) {
-              lastMsg.remove();
-            }
-          }
-        }
-      }
-
-      if (window.addMessage && reply) {
-        const isHTML =
-          reply.includes("<div") ||
-          reply.includes("<p") ||
-          reply.includes("<ul") ||
-          reply.includes("<li") ||
-          reply.includes("<strong");
-        window.addMessage(reply, "bot", isHTML);
-      }
-    });
-  } else {
-    console.warn(
-      "Elemen chat belum lengkap (chat-form / chat-input / chat-messages tidak ditemukan)."
-    );
-  }
-});
-
 function openChatbot() {
   if (!requireLoginForChat()) return;
   document.getElementById("landing").style.display = "none";
@@ -1740,6 +1569,7 @@ function openChatbot() {
   if (typeof window.checkQuizStatusAndWelcome !== "function") {
     console.error("ERROR: checkQuizStatusAndWelcome is not a function!");
   }
+  });
 })();
 
 if (document.readyState === "loading") {
